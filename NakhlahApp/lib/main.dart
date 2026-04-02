@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/home_page.dart';
+import 'screens/onboarding_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Nakhlah — Palm & Date Color Palette
@@ -30,9 +32,7 @@ const Color kBorderLight = Color(0xFFE5DFD8);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const NakhlahApp());
 }
 
@@ -41,10 +41,7 @@ class NakhlahApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Base text theme using Google Fonts Cairo for the Arabic-friendly serif feel
-    final textTheme = GoogleFonts.cairoTextTheme(
-      Theme.of(context).textTheme,
-    );
+    final textTheme = GoogleFonts.cairoTextTheme(Theme.of(context).textTheme);
 
     return MaterialApp(
       title: 'Nakhlah',
@@ -107,8 +104,10 @@ class NakhlahApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: kCardWhite,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 16,
+          ),
           labelStyle: GoogleFonts.cairo(color: kPalmGreen),
           hintStyle: GoogleFonts.cairo(color: Colors.grey.shade400),
           prefixIconColor: kGoldenDate,
@@ -135,9 +134,7 @@ class NakhlahApp extends StatelessWidget {
         ),
 
         // Drawer
-        drawerTheme: const DrawerThemeData(
-          backgroundColor: kOffWhite,
-        ),
+        drawerTheme: const DrawerThemeData(backgroundColor: kOffWhite),
 
         // SnackBar
         snackBarTheme: SnackBarThemeData(
@@ -149,34 +146,90 @@ class NakhlahApp extends StatelessWidget {
         ),
       ),
 
-      // ── Auth-Gated Root ─────────────────────────────────────────────────
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          // Firebase still initialising — branded splash
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: kPalmGreen,
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
-                    SizedBox(height: 16),
-                    CircularProgressIndicator(color: kGoldenDate),
-                  ],
-                ),
+      // ── Root: onboarding gate → auth gate ──────────────────────────────
+      home: const _AppRoot(),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  _AppRoot — decides whether to show onboarding or go straight to auth
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> {
+  // null = still loading prefs, true = done, false = first time
+  bool? _onboardingDone;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOnboardingFlag();
+  }
+
+  Future<void> _loadOnboardingFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    final done = prefs.getBool('onboarding_done') ?? false;
+    if (mounted) setState(() => _onboardingDone = done);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ── Still reading SharedPreferences → branded splash ─────────────────
+    if (_onboardingDone == null) {
+      return const Scaffold(
+        backgroundColor: kPalmGreen,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
+              SizedBox(height: 16),
+              CircularProgressIndicator(color: kGoldenDate),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ── First install → show onboarding ──────────────────────────────────
+    if (!_onboardingDone!) {
+      return const OnboardingScreen();
+    }
+
+    // ── Returning user → Firebase auth gate ──────────────────────────────
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Firebase still initialising → branded splash
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: kPalmGreen,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
+                  SizedBox(height: 16),
+                  CircularProgressIndicator(color: kGoldenDate),
+                ],
               ),
-            );
-          }
+            ),
+          );
+        }
 
-          // User session exists → Home
-          if (snapshot.hasData) return const HomePage();
+        // Signed in → Home
+        if (snapshot.hasData) return const HomePage();
 
-          // No session → Sign In
-          return const SignInScreen();
-        },
-      ),
+        // Not signed in → Sign In
+        return const SignInScreen();
+      },
     );
   }
 }
