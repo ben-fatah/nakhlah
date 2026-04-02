@@ -2,17 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart'; // palette constants
-import 'sign_in_screen.dart';
+import 'scan_screen.dart';
 import 'manage_profile_screen.dart';
+import 'sign_in_screen.dart';
 
-class HomePage extends StatelessWidget {
+// ─── Colour tokens matching the screenshot ────────────────────────────────────
+const Color kBrown900 = Color(0xFF3B1F13); // dark header background
+const Color kBrown700 = Color(0xFF5C3A1E); // buttons, accents
+const Color kBrown100 = Color(0xFFF2EDE8); // page background
+const Color kGoldBadge = Color(0xFFE8B84B); // match badge, TOP badge
+const Color kCardBg   = Color(0xFFEAE4DE); // scan card background
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  // ── Sign-Out ──────────────────────────────────────────────────────────────
-  Future<void> _signOut(BuildContext context) async {
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+
+  // ── mock recent scans data ────────────────────────────────────────────────
+  final List<_ScanItem> _recentScans = const [
+    _ScanItem(name: 'Ajwa',    match: 98, imageAsset: 'assets/images/ajwa.png'),
+    _ScanItem(name: 'Medjool', match: 92, imageAsset: 'assets/images/medjool.png'),
+    _ScanItem(name: 'Sukari',  match: 85, imageAsset: 'assets/images/sukari.png'),
+  ];
+
+  final List<_SellerItem> _sellers = const [
+    _SellerItem(name: 'Al-Madina Farms', rating: 4.9, reviews: '1.2k', isTop: true),
+    _SellerItem(name: 'Royal Oasis',     rating: 4.8, reviews: '850',  isTop: true),
+  ];
+
+  // ── sign out ──────────────────────────────────────────────────────────────
+  Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
-    if (context.mounted) {
+    if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const SignInScreen()),
         (_) => false,
@@ -20,309 +46,713 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  String get _firstName {
+    final name = FirebaseAuth.instance.currentUser?.displayName
+        ?? FirebaseAuth.instance.currentUser?.email
+        ?? 'User';
+    return name.split(' ').first.split('@').first;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? 'No email';
-
     return Scaffold(
-      // ── App Bar ───────────────────────────────────────────────────────────
-      appBar: AppBar(
-        title: const Text('Nakhlah'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () {},
-            tooltip: 'Notifications',
-          ),
-        ],
+      backgroundColor: kBrown100,
+      bottomNavigationBar: _BottomNav(
+        selectedIndex: _selectedIndex,
+        onTap: (i) {
+          if (i == 2) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ScanScreen()),
+            );
+            return;
+          }
+          setState(() => _selectedIndex = i);
+        },
       ),
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Dark header ───────────────────────────────────────────
+              _Header(
+                firstName: _firstName,
+                onNotification: () {},
+                onLanguage: () {},
+              ),
 
-      // ── Drawer ────────────────────────────────────────────────────────────
-      drawer: Drawer(
-        child: Column(
-          children: [
-            // Header with Palm Green background
-            UserAccountsDrawerHeader(
-              decoration: const BoxDecoration(
-                color: kPalmGreen,
-                image: DecorationImage(
-                  image: AssetImage(''), // placeholder — won't render but won't crash
-                  fit: BoxFit.cover,
-                  opacity: 0,
+              // ── Scan card ─────────────────────────────────────────────
+              _ScanCard(
+                onScan: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ScanScreen()),
                 ),
               ),
-              currentAccountPicture: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: kGoldenDate, width: 2.5),
-                  color: kCardWhite,
+
+              const SizedBox(height: 28),
+
+              // ── Quick actions row ─────────────────────────────────────
+              _QuickActions(
+                onScan: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ScanScreen()),
                 ),
-                child: const Icon(Icons.person_rounded,
-                    size: 40, color: kPalmGreen),
-              ),
-              accountName: Text(
-                'Nakhlah User',
-                style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
-              ),
-              accountEmail: Text(
-                email,
-                style: GoogleFonts.cairo(
-                  color: Colors.white.withValues(alpha: 0.85),
+                onProfile: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ManageProfileScreen()),
                 ),
               ),
-            ),
 
-            // ── Nav Items ───────────────────────────────────────────────────
-            _DrawerTile(
-              icon: Icons.home_outlined,
-              label: 'Home',
-              onTap: () => Navigator.of(context).pop(),
-            ),
-            _DrawerTile(
-              icon: Icons.manage_accounts_outlined,
-              label: 'Manage Profile',
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ManageProfileScreen()),
-                );
-              },
-            ),
+              const SizedBox(height: 28),
 
-            const Divider(indent: 16, endIndent: 16),
-
-            // ── Log Out (red) ───────────────────────────────────────────────
-            _DrawerTile(
-              icon: Icons.logout_rounded,
-              label: 'Log Out',
-              isDestructive: true,
-              onTap: () => _signOut(context),
-            ),
-
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Text(
-                'Nakhlah v1.0',
-                style: GoogleFonts.cairo(
-                    color: Colors.grey.shade400, fontSize: 12),
+              // ── Recent scans ──────────────────────────────────────────
+              _SectionHeader(title: 'Recent Scans', actionLabel: 'View all', onAction: () {}),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 190,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _recentScans.length,
+                  itemBuilder: (context, i) => _ScanCard2(item: _recentScans[i]),
+                ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 28),
+
+              // ── Featured sellers ──────────────────────────────────────
+              _SectionHeader(title: 'Featured Sellers', actionLabel: 'Explore All', onAction: () {}),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: _sellers.length,
+                  itemBuilder: (context, i) => _SellerCard(item: _sellers[i]),
+                ),
+              ),
+
+              const SizedBox(height: 100), // nav bar clearance
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
 
-      // ── Dashboard Body ────────────────────────────────────────────────────
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Greeting Card ─────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kPalmGreen, Color(0xFF3D7852)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: kPalmGreen.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Header
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _Header extends StatelessWidget {
+  final String firstName;
+  final VoidCallback onNotification;
+  final VoidCallback onLanguage;
+
+  const _Header({
+    required this.firstName,
+    required this.onNotification,
+    required this.onLanguage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: kBrown900,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // icons row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.language_rounded, color: Colors.white70, size: 22),
+                onPressed: onLanguage,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+                    onPressed: onNotification,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            ],
+          ),
+          const SizedBox(height: 10),
+          // greeting
+          Row(
+            children: [
+              Text(
+                'Marhaba, $firstName ',
+                style: GoogleFonts.cairo(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const Text('👋', style: TextStyle(fontSize: 24)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Scan Promo Card
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ScanCard extends StatelessWidget {
+  final VoidCallback onScan;
+  const _ScanCard({required this.onScan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: kCardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: kBrown900.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Identify a Date',
+                  style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: kBrown900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Scan any date fruit to know its variety instantly',
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: onScan,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: kBrown700,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.filter_center_focus_rounded,
+                            color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Scan Now',
+                          style: GoogleFonts.cairo(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Camera icon placeholder
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.camera_alt_rounded,
+                color: Colors.grey.shade400, size: 36),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Quick Actions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _QuickActions extends StatelessWidget {
+  final VoidCallback onScan;
+  final VoidCallback onProfile;
+
+  const _QuickActions({required this.onScan, required this.onProfile});
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      _QuickAction(icon: Icons.qr_code_scanner_rounded, label: 'Scan',    onTap: onScan),
+      _QuickAction(icon: Icons.explore_outlined,        label: 'Explore',  onTap: () {}),
+      _QuickAction(icon: Icons.storefront_outlined,     label: 'Market',   onTap: () {}),
+      _QuickAction(icon: Icons.history_rounded,         label: 'History',  onTap: () {}),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: actions.map((a) => _QuickActionTile(action: a)).toList(),
+      ),
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  final _QuickAction action;
+  const _QuickActionTile({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: action.onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: kBrown900.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(action.icon, color: kBrown900, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            action.label,
+            style: GoogleFonts.cairo(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: kBrown900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAction {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.label, required this.onTap});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Section Header
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  const _SectionHeader({
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.cairo(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: kBrown900,
+            ),
+          ),
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey.shade500,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              actionLabel,
+              style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Recent Scan Card
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _ScanCard2 extends StatelessWidget {
+  final _ScanItem item;
+  const _ScanCard2({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 150,
+      margin: const EdgeInsets.only(right: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: kBrown900.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Image.asset(
+              item.imageAsset,
+              height: 110,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                height: 110,
+                color: const Color(0xFF2A3A3A),
+                child: const Icon(Icons.eco_rounded, color: Colors.white54, size: 40),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: kBrown900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: kGoldBadge.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${item.match}% Match',
+                    style: GoogleFonts.cairo(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF8B6914),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScanItem {
+  final String name;
+  final int match;
+  final String imageAsset;
+  const _ScanItem({required this.name, required this.match, required this.imageAsset});
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Seller Card
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _SellerCard extends StatelessWidget {
+  final _SellerItem item;
+  const _SellerCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: kBrown900.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: kBrown100,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.eco_rounded, color: kBrown700, size: 22),
+              ),
+              const Spacer(),
+              if (item.isTop)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kGoldBadge.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.eco_rounded,
-                          color: kGoldenDate, size: 28),
-                      const SizedBox(width: 10),
+                      Icon(Icons.verified_rounded, color: kGoldBadge, size: 12),
+                      const SizedBox(width: 3),
                       Text(
-                        'Welcome to Nakhlah!',
+                        'TOP',
                         style: GoogleFonts.cairo(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF8B6914),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your AI-powered date variety\nidentification assistant.',
-                    style: GoogleFonts.cairo(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // ── Section Label ─────────────────────────────────────────────
-            Text(
-              'Quick Actions',
-              style: GoogleFonts.cairo(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: kPalmGreen,
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // ── Quick Action Grid ─────────────────────────────────────────
-            _ActionCard(
-              icon: Icons.camera_alt_outlined,
-              title: 'Scan a Date',
-              subtitle: 'Use the camera to identify date varieties.',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Scan feature coming soon!')),
-                );
-              },
-            ),
-            const SizedBox(height: 14),
-            _ActionCard(
-              icon: Icons.manage_accounts_outlined,
-              title: 'Manage Profile',
-              subtitle: 'View and update your account details.',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const ManageProfileScreen()),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _ActionCard(
-              icon: Icons.history_rounded,
-              title: 'Scan History',
-              subtitle: 'Review your past identifications.',
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('History feature coming soon!')),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  Private Widgets
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/// A drawer navigation tile styled with the app palette.
-class _DrawerTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isDestructive;
-
-  const _DrawerTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isDestructive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isDestructive ? Colors.red.shade600 : kPalmGreen;
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        label,
-        style: GoogleFonts.cairo(
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onTap: onTap,
-    );
-  }
-}
-
-/// A dashboard action card with a subtle shadow & golden accent arrow.
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      borderRadius: BorderRadius.circular(14),
-      color: kCardWhite,
-      elevation: 2,
-      shadowColor: kPalmGreen.withValues(alpha: 0.08),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        splashColor: kGoldenDate.withValues(alpha: 0.12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: kPalmGreen.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: kPalmGreen, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.cairo(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: kPalmGreen,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.cairo(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: kGoldenDate, size: 24),
             ],
           ),
+          const SizedBox(height: 10),
+          Text(
+            item.name,
+            style: GoogleFonts.cairo(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: kBrown900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, color: kGoldBadge, size: 15),
+              const SizedBox(width: 3),
+              Text(
+                '${item.rating} (${item.reviews})',
+                style: GoogleFonts.cairo(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SellerItem {
+  final String name;
+  final double rating;
+  final String reviews;
+  final bool isTop;
+  const _SellerItem({
+    required this.name,
+    required this.rating,
+    required this.reviews,
+    required this.isTop,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Bottom Navigation Bar
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _BottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomNav({required this.selectedIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: kBrown900.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              _NavItem(icon: Icons.home_rounded,      label: 'Home',    index: 0, selected: selectedIndex, onTap: onTap),
+              _NavItem(icon: Icons.explore_outlined,  label: 'Explore', index: 1, selected: selectedIndex, onTap: onTap),
+
+              // Centre FAB
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => onTap(2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: kBrown900,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: kBrown900.withOpacity(0.4),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.filter_center_focus_rounded,
+                            color: Colors.white, size: 26),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Scan',
+                        style: GoogleFonts.cairo(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              _NavItem(icon: Icons.shopping_bag_outlined, label: 'Market',  index: 3, selected: selectedIndex, onTap: onTap),
+              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, selected: selectedIndex, onTap: onTap),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final int index;
+  final int selected;
+  final ValueChanged<int> onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.index,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = index == selected;
+    final color = isSelected ? kBrown700 : Colors.grey.shade400;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );

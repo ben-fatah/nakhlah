@@ -18,20 +18,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Scan Any Date',
       description:
           'Point your camera at any date fruit and our AI instantly identifies the variety.',
+      imagePath:
+          'assets/images/dates_closeup.png', // swap with your illustration
     ),
     _OnboardingData(
       title: 'Get Nutritional Info',
       description:
           'Instantly view detailed nutritional data for every date variety you scan.',
+      imagePath: 'assets/images/palm_grove_header.png',
     ),
     _OnboardingData(
       title: 'Explore Varieties',
       description:
           'Discover 8 unique date varieties from across the region with Nakhlah AI.',
+      imagePath: 'assets/images/nakhlah_hero.png',
     ),
   ];
 
-  // ── Save flag then go to SignIn ──────────────────────────────────────────
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_done', true);
@@ -59,23 +62,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Skip button ──────────────────────────────────────────────
-            Align(
-              alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _finishOnboarding, // same as finishing last page
-                child: const Text(
-                  'Skip',
-                  style: TextStyle(
-                    color: Color(0xFF7D5A3C),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+            // ── Top row: logo left, skip right ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Image.asset(
+                    'assets/icon.png',
+                    height: 32,
+                    fit: BoxFit.contain,
                   ),
-                ),
+                  TextButton(
+                    onPressed: _finishOnboarding,
+                    child: const Text(
+                      'Skip',
+                      style: TextStyle(
+                        color: Color(0xFF7D5A3C),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // ── Page content ─────────────────────────────────────────────
+            // ── Pages ────────────────────────────────────────────────────
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -94,29 +107,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 (i) => AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: i == _currentPage ? 24 : 8,
+                  width: i == _currentPage ? 28 : 8,
                   height: 8,
                   decoration: BoxDecoration(
                     color: i == _currentPage
-                        ? const Color(0xFF7D5A3C)
+                        ? const Color(0xFF5C3D1E)
                         : const Color(0xFFD4B896),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
-            // ── Next / Get Started button ─────────────────────────────────
+            // ── Button ───────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 28),
               child: SizedBox(
                 width: double.infinity,
-                height: 56,
+                height: 58,
                 child: ElevatedButton(
                   onPressed: _next,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7D5A3C),
+                    backgroundColor: const Color(0xFF5C3D1E),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(32),
@@ -127,13 +140,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
                     style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
           ],
         ),
       ),
@@ -149,83 +163,87 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          // Card with logo
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
+          // ── Illustration card ──────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            height: size.height * 0.42,
+            margin: const EdgeInsets.only(bottom: 36),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF5C3D1E).withOpacity(0.08),
+                  blurRadius: 30,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Warm gradient background
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFFFFBF5), Color(0xFFF5EDE0)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                  ),
+                  // Page illustration (falls back to logo if image missing)
+                  Center(
+                    child: Image.asset(
+                      data.imagePath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Padding(
+                          padding: const EdgeInsets.all(48),
+                          child: Image.asset(
+                            'assets/images/icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
-              child: Center(
-                child: Container(
-                  width: 180,
-                  height: 180,
-                  color: const Color(0xFFF5F5F5),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Replace with your logo: Image.asset('assets/images/logo.png', width: 80)
-                      const Icon(Icons.eco, size: 60, color: Color(0xFF4A7C59)),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'NAKHLAH',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const Text(
-                        'DELIBRA HERO',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ),
           ),
 
-          // Title
+          // ── Title ──────────────────────────────────────────────────────
           Text(
             data.title,
             style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
               color: Color(0xFF1A1A1A),
+              height: 1.2,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // Description
+          // ── Description ────────────────────────────────────────────────
           Text(
             data.description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: Color(0xFF666666),
-              height: 1.5,
+              color: Colors.grey.shade600,
+              height: 1.6,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
@@ -235,5 +253,11 @@ class _OnboardingPage extends StatelessWidget {
 class _OnboardingData {
   final String title;
   final String description;
-  _OnboardingData({required this.title, required this.description});
+  final String imagePath;
+
+  _OnboardingData({
+    required this.title,
+    required this.description,
+    required this.imagePath,
+  });
 }
