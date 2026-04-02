@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "624405399465",
+    "project_id": "nakhlah-c5a65",
+    "storage_bucket": "nakhlah-c5a65.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:624405399465:android:bdb3bc7eb8b2f2079826b8",
+        "android_client_info": {
+          "package_name": "com.example.nakhlah"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvWxfFUrHGWSe0cQL-pvVitX_yE50WLvI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
