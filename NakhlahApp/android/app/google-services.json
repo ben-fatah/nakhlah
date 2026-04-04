@@ -12,7 +12,20 @@
           "package_name": "com.example.nakhlah"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "624405399465-6ndvto70dovdlfo0ic6rls3uaab2ct99.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nakhlah",
+            "certificate_hash": "efe842d33b41a7f131028eed6d920a763016964b"
+          }
+        },
+        {
+          "client_id": "624405399465-ecb2sp6ufm3ogvb85gjnm21mfd2m4k2i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDvWxfFUrHGWSe0cQL-pvVitX_yE50WLvI"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "624405399465-ecb2sp6ufm3ogvb85gjnm21mfd2m4k2i.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "624405399465-hb4okjksgefl6cibbsot5oggihjupnpg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.nakhlah"
+              }
+            }
+          ]
         }
       }
     }

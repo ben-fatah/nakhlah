@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/home_page.dart';
-import 'screens/onboarding_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Nakhlah — Palm & Date Color Palette
@@ -41,6 +39,7 @@ class NakhlahApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Base text theme using Google Fonts Cairo for the Arabic-friendly serif feel
     final textTheme = GoogleFonts.cairoTextTheme(Theme.of(context).textTheme);
 
     return MaterialApp(
@@ -146,90 +145,34 @@ class NakhlahApp extends StatelessWidget {
         ),
       ),
 
-      // ── Root: onboarding gate → auth gate ──────────────────────────────
-      home: const _AppRoot(),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  _AppRoot — decides whether to show onboarding or go straight to auth
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _AppRoot extends StatefulWidget {
-  const _AppRoot();
-
-  @override
-  State<_AppRoot> createState() => _AppRootState();
-}
-
-class _AppRootState extends State<_AppRoot> {
-  // null = still loading prefs, true = done, false = first time
-  bool? _onboardingDone;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadOnboardingFlag();
-  }
-
-  Future<void> _loadOnboardingFlag() async {
-    final prefs = await SharedPreferences.getInstance();
-    final done = prefs.getBool('onboarding_done') ?? false;
-    if (mounted) setState(() => _onboardingDone = done);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // ── Still reading SharedPreferences → branded splash ─────────────────
-    if (_onboardingDone == null) {
-      return const Scaffold(
-        backgroundColor: kPalmGreen,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
-              SizedBox(height: 16),
-              CircularProgressIndicator(color: kGoldenDate),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // ── First install → show onboarding ──────────────────────────────────
-    if (!_onboardingDone!) {
-      return const OnboardingScreen();
-    }
-
-    // ── Returning user → Firebase auth gate ──────────────────────────────
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        // Firebase still initialising → branded splash
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: kPalmGreen,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
-                  SizedBox(height: 16),
-                  CircularProgressIndicator(color: kGoldenDate),
-                ],
+      // ── Auth-Gated Root ─────────────────────────────────────────────────
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // Firebase still initialising — branded splash
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: kPalmGreen,
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
+                    SizedBox(height: 16),
+                    CircularProgressIndicator(color: kGoldenDate),
+                  ],
+                ),
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        // Signed in → Home
-        if (snapshot.hasData) return const HomePage();
+          // User session exists → Home
+          if (snapshot.hasData) return const HomePage();
 
-        // Not signed in → Sign In
-        return const SignInScreen();
-      },
+          // No session → Sign In
+          return const SignInScreen();
+        },
+      ),
     );
   }
 }
