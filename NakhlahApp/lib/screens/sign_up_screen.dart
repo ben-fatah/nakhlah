@@ -42,6 +42,12 @@ class _SignUpScreenState extends State<SignUpScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
+  // ── Password-strength tracking ───────────────────────────────────────────
+  bool _hasMinLength = false;
+  bool _hasUppercase = false;
+  bool _hasNumber = false;
+  bool _passwordTouched = false;
+
   // ── Firebase ──────────────────────────────────────────────────────────────
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -59,6 +65,9 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
     _fadeIn = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+
+    // Live password-requirement tracking
+    _passwordCtrl.addListener(_evaluatePassword);
   }
 
   @override
@@ -69,6 +78,16 @@ class _SignUpScreenState extends State<SignUpScreen>
     _confirmPasswordCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
+  }
+
+  void _evaluatePassword() {
+    final pwd = _passwordCtrl.text;
+    setState(() {
+      _passwordTouched = pwd.isNotEmpty;
+      _hasMinLength = pwd.length >= 8;
+      _hasUppercase = pwd.contains(RegExp(r'[A-Z]'));
+      _hasNumber = pwd.contains(RegExp(r'[0-9]'));
+    });
   }
 
   // ── Sign-Up Logic ─────────────────────────────────────────────────────────
@@ -193,6 +212,34 @@ class _SignUpScreenState extends State<SignUpScreen>
     );
   }
 
+  // ── Password requirement row ──────────────────────────────────────────────
+  Widget _buildRequirement(String text, bool met) {
+    return Row(
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          transitionBuilder: (child, anim) =>
+              ScaleTransition(scale: anim, child: child),
+          child: Icon(
+            met ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            key: ValueKey(met),
+            size: 16,
+            color: met ? const Color(0xFF4CAF50) : const Color(0xFFD32F2F),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: GoogleFonts.cairo(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: met ? const Color(0xFF4CAF50) : const Color(0xFFD32F2F),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── UI ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -260,7 +307,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                   // ── Full Name ───────────────────────────────────────────
                   _buildField(
                     label: 'Full Name',
-                    hint: 'John Doe',
+                    hint: 'Ali Al-Otaibi',
                     icon: Icons.person_outline_rounded,
                     controller: _nameCtrl,
                     textCapitalization: TextCapitalization.words,
@@ -310,12 +357,34 @@ class _SignUpScreenState extends State<SignUpScreen>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty) {
                         return 'Password is required.';
-                      if (v.length < 8) return 'Must be at least 8 characters.';
+                      }
+                      if (v.length < 8) {
+                        return 'Must be at least 8 characters.';
+                      }
+                      if (!v.contains(RegExp(r'[A-Z]'))) {
+                        return 'Must contain at least one capital letter.';
+                      }
+                      if (!v.contains(RegExp(r'[0-9]'))) {
+                        return 'Must contain at least one number.';
+                      }
                       return null;
                     },
                   ),
+
+                  // ── Password requirements checklist ─────────────────────
+                  if (_passwordTouched) ...[
+                    const SizedBox(height: 10),
+                    _buildRequirement('At least 8 characters', _hasMinLength),
+                    const SizedBox(height: 4),
+                    _buildRequirement(
+                      'At least one capital letter',
+                      _hasUppercase,
+                    ),
+                    const SizedBox(height: 4),
+                    _buildRequirement('At least one number', _hasNumber),
+                  ],
                   const SizedBox(height: 18),
 
                   // ── Confirm Password ────────────────────────────────────
