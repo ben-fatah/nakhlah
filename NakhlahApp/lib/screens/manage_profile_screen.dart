@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart'; // kGoldenDate, kOffWhite, kCardWhite, kBorderLight
+import '../main.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
 import 'sign_in_screen.dart';
 
@@ -15,7 +17,6 @@ class ManageProfileScreen extends StatefulWidget {
 }
 
 class _ManageProfileScreenState extends State<ManageProfileScreen> {
-  // ── Form ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -26,7 +27,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -40,17 +40,14 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     super.dispose();
   }
 
-  // ── Fetch Profile from Firestore ──────────────────────────────────────────
   Future<void> _fetchUserData() async {
     final user = _auth.currentUser;
     if (user == null) {
       if (mounted) setState(() => _isFetching = false);
       return;
     }
-
     try {
       final snap = await _firestore.collection('users').doc(user.uid).get();
-
       if (snap.exists && mounted) {
         final data = snap.data()!;
         _nameCtrl.text = data['fullName'] ?? '';
@@ -59,45 +56,32 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         _emailCtrl.text = user.email ?? '';
       }
     } catch (e) {
-      debugPrint('Fetch profile error: $e');
       if (mounted) _showSnackBar('Could not load profile.', isError: true);
     } finally {
       if (mounted) setState(() => _isFetching = false);
     }
   }
 
-  // ── Save Profile to Firestore ─────────────────────────────────────────────
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
-
     final user = _auth.currentUser;
-    if (user == null) {
-      _showSnackBar('Not authenticated. Please sign in again.', isError: true);
-      return;
-    }
-
+    if (user == null) return;
     setState(() => _isLoading = true);
-
     try {
-      await _firestore.collection('users').doc(user.uid).set(
-        {
-          'fullName': _nameCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true), // preserve scan history, favorites, etc.
-      );
-
-      if (mounted) _showSnackBar('Profile updated successfully!');
+      await _firestore.collection('users').doc(user.uid).set({
+        'fullName': _nameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
     } catch (e) {
-      debugPrint('Save profile error: $e');
-      if (mounted) _showSnackBar('Failed to save. Try again.', isError: true);
+      if (mounted)
+        _showSnackBar(AppLocalizations.of(context).failedToSave, isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // ── Sign Out ──────────────────────────────────────────────────────────────
   Future<void> _signOut() async {
     await AuthService.signOut();
     if (mounted) {
@@ -108,7 +92,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
-  // ── SnackBar Helper ───────────────────────────────────────────────────────
   void _showSnackBar(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -121,7 +104,22 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     );
   }
 
-  // ── Computed initial for the avatar ────────────────────────────────────────
+  void _toggleLanguage() {
+    localeProvider.toggleLocale();
+    // Small feedback snackbar
+    final isNowArabic = localeProvider.isArabic;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isNowArabic ? 'تم التبديل إلى العربية 🌙' : 'Switched to English 🌍',
+        ),
+        backgroundColor: const Color(0xFF5C3A1E),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   String get _userInitial {
     final name = _nameCtrl.text.trim();
     if (name.isNotEmpty) return name[0].toUpperCase();
@@ -130,66 +128,53 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     return '?';
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  BUILD
-  // ═════════════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kOffWhite,
-      // No AppBar — we build a custom header instead
-      body: _isFetching
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF5C3A1E)),
-            )
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // ─── 1. Profile Header Card ─────────────────────────────
-                  _buildProfileHeader(context),
+    final l = AppLocalizations.of(context);
+    final isAr = localeProvider.isArabic;
 
-                  // ─── Scrollable content below the header ────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 28),
-
-                          // ─── 2. Edit Information Card ───────────────────
-                          _buildEditCard(),
-
-                          const SizedBox(height: 28),
-
-                          // ─── 3. My Journey Stats ────────────────────────
-                          _buildSectionLabel('My Journey'),
-                          const SizedBox(height: 14),
-                          _buildStatCards(),
-
-                          const SizedBox(height: 28),
-
-                          // ─── 4. Settings List ───────────────────────────
-                          _buildSectionLabel('Settings'),
-                          const SizedBox(height: 14),
-                          _buildSettingsList(),
-
-                          const SizedBox(height: 36),
-                        ],
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: kOffWhite,
+        body: _isFetching
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFF5C3A1E)),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildProfileHeader(context, l),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 28),
+                            _buildEditCard(l),
+                            const SizedBox(height: 28),
+                            _buildSectionLabel(l.myJourney),
+                            const SizedBox(height: 14),
+                            _buildStatCards(l),
+                            const SizedBox(height: 28),
+                            _buildSectionLabel(l.settings),
+                            const SizedBox(height: 14),
+                            _buildSettingsList(l),
+                            const SizedBox(height: 36),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  1. PROFILE HEADER
-  // ═════════════════════════════════════════════════════════════════════════════
-  Widget _buildProfileHeader(BuildContext context) {
+  Widget _buildProfileHeader(BuildContext context, AppLocalizations l) {
     final name = _nameCtrl.text.trim().isNotEmpty
         ? _nameCtrl.text.trim()
         : 'Nakhlah User';
@@ -216,7 +201,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       child: Column(
         children: [
-          // Back button row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -230,7 +214,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  'My Profile',
+                  l.myProfile,
                   style: GoogleFonts.cairo(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -238,14 +222,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                   ),
                 ),
                 const Spacer(),
-                // Invisible icon to keep title centered
                 const SizedBox(width: 48),
               ],
             ),
           ),
           const SizedBox(height: 16),
-
-          // Avatar with user initial
           Container(
             width: 92,
             height: 92,
@@ -276,8 +257,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ),
           ),
           const SizedBox(height: 14),
-
-          // Name
           Text(
             name,
             style: GoogleFonts.cairo(
@@ -287,8 +266,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ),
           ),
           const SizedBox(height: 2),
-
-          // Email
           Text(
             email,
             style: GoogleFonts.cairo(
@@ -301,10 +278,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  2. EDIT INFORMATION CARD
-  // ═════════════════════════════════════════════════════════════════════════════
-  Widget _buildEditCard() {
+  Widget _buildEditCard(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -321,13 +295,12 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Section heading
           Row(
             children: [
               const Icon(Icons.edit_rounded, color: kGoldenDate, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Edit Information',
+                l.editInformation,
                 style: GoogleFonts.cairo(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -337,27 +310,23 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Full Name field
           TextFormField(
             controller: _nameCtrl,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Full Name',
-              prefixIcon: Icon(Icons.person_outline_rounded),
+            decoration: InputDecoration(
+              labelText: l.fullName,
+              prefixIcon: const Icon(Icons.person_outline_rounded),
             ),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Name is required.' : null,
           ),
           const SizedBox(height: 16),
-
-          // Email field
           TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              labelText: 'Email Address',
-              prefixIcon: Icon(Icons.email_outlined),
+            decoration: InputDecoration(
+              labelText: l.emailAddress,
+              prefixIcon: const Icon(Icons.email_outlined),
             ),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Email is required.';
@@ -368,8 +337,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             },
           ),
           const SizedBox(height: 24),
-
-          // Save Button
           SizedBox(
             height: 52,
             child: ElevatedButton.icon(
@@ -384,7 +351,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                       ),
                     )
                   : const Icon(Icons.check_circle_outline_rounded, size: 20),
-              label: Text(_isLoading ? 'Saving...' : 'Save Updates'),
+              label: Text(_isLoading ? l.saving : l.saveUpdates),
             ),
           ),
         ],
@@ -392,17 +359,14 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  3. MY JOURNEY — STAT CARDS
-  // ═════════════════════════════════════════════════════════════════════════════
-  Widget _buildStatCards() {
+  Widget _buildStatCards(AppLocalizations l) {
     return Row(
       children: [
         Expanded(
           child: _StatCard(
             icon: Icons.camera_alt_outlined,
             value: '0',
-            label: 'Dates Scanned',
+            label: l.datesScanned,
           ),
         ),
         const SizedBox(width: 14),
@@ -410,17 +374,14 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           child: _StatCard(
             icon: Icons.favorite_outline_rounded,
             value: '0',
-            label: 'Saved Favorites',
+            label: l.savedFavorites,
           ),
         ),
       ],
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  4. SETTINGS LIST
-  // ═════════════════════════════════════════════════════════════════════════════
-  Widget _buildSettingsList() {
+  Widget _buildSettingsList(AppLocalizations l) {
     return Container(
       decoration: BoxDecoration(
         color: kCardWhite,
@@ -435,22 +396,66 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       child: Column(
         children: [
+          // ── Language Toggle ───────────────────────────────────────────
           _SettingsTile(
             icon: Icons.language_rounded,
-            label: 'Change Language',
-            trailing: Text(
-              'English',
-              style: GoogleFonts.cairo(
-                color: Colors.grey.shade500,
-                fontSize: 13,
-              ),
+            label: l.changeLanguage,
+            trailing: ValueListenableBuilder<Locale>(
+              valueListenable: localeProvider,
+              builder: (_, locale, __) {
+                final isAr = locale.languageCode == 'ar';
+                return GestureDetector(
+                  onTap: _toggleLanguage,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5C3A1E).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF5C3A1E).withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isAr ? 'عربي' : 'EN',
+                          style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF5C3A1E),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.swap_horiz_rounded,
+                          size: 16,
+                          color: Color(0xFF5C3A1E),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isAr ? 'EN' : 'عربي',
+                          style: GoogleFonts.cairo(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
-            onTap: () => _showSnackBar('Language settings coming soon!'),
+            onTap: _toggleLanguage,
           ),
           const Divider(height: 1, indent: 56, endIndent: 16),
           _SettingsTile(
             icon: Icons.restaurant_rounded,
-            label: 'Dietary Goals',
+            label: l.dietaryGoals,
             trailing: const Icon(
               Icons.chevron_right_rounded,
               color: kGoldenDate,
@@ -461,7 +466,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           const Divider(height: 1, indent: 56, endIndent: 16),
           _SettingsTile(
             icon: Icons.logout_rounded,
-            label: 'Log Out',
+            label: l.logOut,
             isDestructive: true,
             trailing: const SizedBox.shrink(),
             onTap: _signOut,
@@ -471,9 +476,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     );
   }
 
-  // ═════════════════════════════════════════════════════════════════════════════
-  //  HELPERS
-  // ═════════════════════════════════════════════════════════════════════════════
   Widget _buildSectionLabel(String text) {
     return Row(
       children: [
@@ -499,12 +501,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  PRIVATE WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/// A stat card showing an icon, a big number, and a label.
-/// Uses a subtle gradient background with Golden Date accent icons.
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
@@ -534,7 +530,6 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Icon inside a subtle circle
           Container(
             width: 50,
             height: 50,
@@ -545,7 +540,6 @@ class _StatCard extends StatelessWidget {
             child: Icon(icon, color: kGoldenDate, size: 24),
           ),
           const SizedBox(height: 14),
-          // Big number
           Text(
             value,
             style: GoogleFonts.cairo(
@@ -555,7 +549,6 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          // Label
           Text(
             label,
             textAlign: TextAlign.center,
@@ -571,7 +564,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-/// A single row in the settings list.
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
