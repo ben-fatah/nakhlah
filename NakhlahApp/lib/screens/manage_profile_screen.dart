@@ -173,8 +173,9 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       }, SetOptions(merge: true));
       if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         _showSnackBar(AppLocalizations.of(context).failedToSave, isError: true);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -361,7 +362,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                         ? Image.network(
                             _photoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
+                            errorBuilder: (_, _, _) => Center(
                               child: Text(
                                 _userInitial,
                                 style: GoogleFonts.cairo(
@@ -491,6 +492,13 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             height: 52,
             child: ElevatedButton.icon(
               onPressed: _isLoading ? null : _saveChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5C3A1E),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(
+                  0xFF5C3A1E,
+                ).withValues(alpha: 0.4),
+              ),
               icon: _isLoading
                   ? const SizedBox(
                       width: 20,
@@ -552,7 +560,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             label: l.changeLanguage,
             trailing: ValueListenableBuilder<Locale>(
               valueListenable: localeProvider,
-              builder: (_, locale, __) {
+              builder: (_, locale, _) {
                 final isAr = locale.languageCode == 'ar';
                 return GestureDetector(
                   onTap: _toggleLanguage,

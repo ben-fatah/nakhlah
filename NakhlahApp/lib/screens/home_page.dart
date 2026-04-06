@@ -4,16 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
 import 'scan_screen.dart';
 import 'explore_screen.dart';
-import 'market_screen.dart';
+import 'market_screen.dart' as market;
 import '../providers/locale_provider.dart';
 import '../l10n/app_localizations.dart';
 
-//  Colour tokens matching the screenshot
-const Color kBrown900 = Color(0xFF3B1F13); // dark header background
-const Color kBrown700 = Color(0xFF5C3A1E); // buttons, accents
-const Color kBrown100 = Color(0xFFF2EDE8); // page background
-const Color kGoldBadge = Color(0xFFE8B84B); // match badge, TOP badge
-const Color kCardBg = Color(0xFFEAE4DE); // scan card background
+const Color kBrown900 = Color(0xFF3B1F13);
+const Color kBrown700 = Color(0xFF5C3A1E);
+const Color kBrown100 = Color(0xFFF2EDE8);
+const Color kGoldBadge = Color(0xFFE8B84B);
+const Color kCardBg = Color(0xFFEAE4DE);
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,7 +24,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  //  mock recent scans data
   final List<_ScanItem> _recentScans = const [
     _ScanItem(name: 'Ajwa', match: 98, imageAsset: 'assets/images/ajwa.png'),
     _ScanItem(
@@ -67,7 +65,6 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _selectedIndex,
         homeLabel: l10n.home,
         exploreLabel: l10n.explore,
-        scanLabel: l10n.scan,
         marketLabel: l10n.market,
         profileLabel: l10n.profile,
         onTap: (i) {
@@ -84,9 +81,9 @@ class _HomePageState extends State<HomePage> {
             return;
           }
           if (i == 3) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const MarketScreen()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const market.MarketScreen()),
+            );
             return;
           }
           if (i == 4) {
@@ -107,14 +104,11 @@ class _HomePageState extends State<HomePage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  //  Dark header
                   _Header(
                     firstName: _firstName,
                     onNotification: () {},
                     onLanguage: () => localeProvider.toggleLocale(),
                   ),
-
-                  //  Scan card
                   _ScanCard(
                     label: l.scanDates,
                     subtitle: l.identifyInSeconds,
@@ -123,34 +117,8 @@ class _HomePageState extends State<HomePage> {
                       MaterialPageRoute(builder: (_) => const ScanScreen()),
                     ),
                   ),
-
                   const SizedBox(height: 28),
-
-                  //  Quick actions row
-                  _QuickActions(
-                    scanLabel: l.scan,
-                    exploreLabel: l.explore,
-                    marketLabel: l.market,
-                    historyLabel: l.history,
-                    onScan: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ScanScreen()),
-                    ),
-                    onExplore: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ExploreScreen()),
-                    ),
-                    onMarket: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const MarketScreen()),
-                    ),
-                    onProfile: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ManageProfileScreen(),
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: 28),
-
-                  //  Recent scans
                   _SectionHeader(
                     title: l.recentScans,
                     actionLabel: l.viewAll,
@@ -167,15 +135,14 @@ class _HomePageState extends State<HomePage> {
                           _ScanCard2(item: _recentScans[i]),
                     ),
                   ),
-
                   const SizedBox(height: 28),
-
-                  //  Featured sellers
                   _SectionHeader(
                     title: l.featuredSellers,
                     actionLabel: l.exploreAll,
                     onAction: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const MarketScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const market.MarketScreen(),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -189,7 +156,6 @@ class _HomePageState extends State<HomePage> {
                           _SellerCard(item: _sellers[i]),
                     ),
                   ),
-
                   const SizedBox(height: 16),
                 ],
               );
@@ -201,10 +167,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-//
-//  Header
-//
-
+// ── Header ────────────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
   final String firstName;
   final VoidCallback onNotification;
@@ -224,7 +187,6 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // icons row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -251,8 +213,34 @@ class _Header extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
                 ],
               ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                'Marhaba, $firstName ',
+                style: GoogleFonts.cairo(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const Text('👋', style: TextStyle(fontSize: 24)),
             ],
           ),
         ],
@@ -261,10 +249,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-//
-//  Scan Card (Main Card)
-//
-
+// ── Scan Promo Card ───────────────────────────────────────────────────────────
 class _ScanCard extends StatelessWidget {
   final VoidCallback onScan;
   final String label;
@@ -288,7 +273,7 @@ class _ScanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.08),
+            color: kBrown900.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -353,7 +338,6 @@ class _ScanCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          // Camera icon placeholder
           Container(
             width: 80,
             height: 80,
@@ -373,19 +357,10 @@ class _ScanCard extends StatelessWidget {
   }
 }
 
-//
-//  Quick Actions
-//
-
+// ── Quick Actions ─────────────────────────────────────────────────────────────
 class _QuickActions extends StatelessWidget {
-  final VoidCallback onScan;
-  final VoidCallback onExplore;
-  final VoidCallback onMarket;
-  final VoidCallback onProfile;
-  final String scanLabel;
-  final String exploreLabel;
-  final String marketLabel;
-  final String historyLabel;
+  final VoidCallback onScan, onExplore, onMarket, onProfile;
+  final String scanLabel, exploreLabel, marketLabel, historyLabel;
 
   const _QuickActions({
     required this.onScan,
@@ -422,7 +397,6 @@ class _QuickActions extends StatelessWidget {
         onTap: () {},
       ),
     ];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -451,7 +425,7 @@ class _QuickActionTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: kBrown900.withValues(alpha: 0.06),
+                  color: kBrown900.withOpacity(0.06),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -485,15 +459,10 @@ class _QuickAction {
   });
 }
 
-//
-//  Section Header
-//
-
+// ── Section Header ────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String actionLabel;
+  final String title, actionLabel;
   final VoidCallback onAction;
-
   const _SectionHeader({
     required this.title,
     required this.actionLabel,
@@ -537,10 +506,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-//
-//  Recent Scan Card
-//
-
+// ── Recent Scan Card ──────────────────────────────────────────────────────────
 class _ScanCard2 extends StatelessWidget {
   final _ScanItem item;
   const _ScanCard2({required this.item});
@@ -555,7 +521,7 @@ class _ScanCard2 extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.07),
+            color: kBrown900.withOpacity(0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -564,7 +530,6 @@ class _ScanCard2 extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // image
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: Image.asset(
@@ -572,7 +537,7 @@ class _ScanCard2 extends StatelessWidget {
               height: 110,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 110,
                 color: const Color(0xFF2A3A3A),
                 child: const Icon(
@@ -603,7 +568,7 @@ class _ScanCard2 extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withValues(alpha: 0.18),
+                    color: kGoldBadge.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -611,7 +576,7 @@ class _ScanCard2 extends StatelessWidget {
                     style: GoogleFonts.cairo(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF8B6914),
+                      color: const Color(0xFF8B6914),
                     ),
                   ),
                 ),
@@ -635,10 +600,7 @@ class _ScanItem {
   });
 }
 
-//
-//  Seller Card
-//
-
+// ── Seller Card ───────────────────────────────────────────────────────────────
 class _SellerCard extends StatelessWidget {
   final _SellerItem item;
   const _SellerCard({required this.item});
@@ -654,7 +616,7 @@ class _SellerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.07),
+            color: kBrown900.withOpacity(0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -686,7 +648,7 @@ class _SellerCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withValues(alpha: 0.15),
+                    color: kGoldBadge.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -699,7 +661,7 @@ class _SellerCard extends StatelessWidget {
                         style: GoogleFonts.cairo(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF8B6914),
+                          color: const Color(0xFF8B6914),
                         ),
                       ),
                     ],
@@ -719,7 +681,7 @@ class _SellerCard extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.star_rounded, color: kGoldBadge, size: 15),
+              Icon(Icons.star_rounded, color: kGoldBadge, size: 15),
               const SizedBox(width: 3),
               Text(
                 '${item.rating} (${item.reviews})',
@@ -749,25 +711,17 @@ class _SellerItem {
   });
 }
 
-//
-//  Bottom Navigation Bar
-//
-
+// ── Bottom Navigation Bar ─────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
-  final String homeLabel;
-  final String exploreLabel;
-  final String scanLabel;
-  final String marketLabel;
-  final String profileLabel;
+  final String homeLabel, exploreLabel, marketLabel, profileLabel;
 
   const _BottomNav({
     required this.selectedIndex,
     required this.onTap,
     required this.homeLabel,
     required this.exploreLabel,
-    required this.scanLabel,
     required this.marketLabel,
     required this.profileLabel,
   });
@@ -779,7 +733,7 @@ class _BottomNav extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.08),
+            color: kBrown900.withOpacity(0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -806,43 +760,31 @@ class _BottomNav extends StatelessWidget {
                 onTap: onTap,
               ),
 
-              // Centre FAB
+              // ── Centre FAB — NO label underneath ──────────────────────
               Expanded(
                 child: GestureDetector(
                   onTap: () => onTap(2),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: kBrown900,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: kBrown900.withValues(alpha: 0.4),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.filter_center_focus_rounded,
-                          color: Colors.white,
-                          size: 26,
-                        ),
+                  child: Center(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: kBrown900,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: kBrown900.withOpacity(0.4),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        scanLabel,
-                        style: GoogleFonts.cairo(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade500,
-                        ),
+                      child: const Icon(
+                        Icons.filter_center_focus_rounded,
+                        color: Colors.white,
+                        size: 26,
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -872,8 +814,7 @@ class _BottomNav extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final int index;
-  final int selected;
+  final int index, selected;
   final ValueChanged<int> onTap;
 
   const _NavItem({
@@ -888,7 +829,6 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = index == selected;
     final color = isSelected ? kBrown700 : Colors.grey.shade400;
-
     return Expanded(
       child: GestureDetector(
         onTap: () => onTap(index),

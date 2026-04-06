@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
 import 'scan_screen.dart';
-import 'market_screen.dart';
+import 'market_screen.dart' as market_screen;
 import 'manage_profile_screen.dart';
 
 const Color _kBg = Color(0xFFF5F0EB);
@@ -273,7 +273,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         crossAxisCount: _isGrid ? 2 : 1,
         crossAxisSpacing: 14,
         mainAxisSpacing: 14,
-        childAspectRatio: _isGrid ? 0.72 : 2.8,
+        childAspectRatio: _isGrid ? 0.9 : 3.5,
       ),
       itemCount: items.length,
       itemBuilder: (context, i) =>
@@ -283,12 +283,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   // ── Bottom Nav ─────────────────────────────────────────────────────────────
   Widget _buildBottomNav() {
+    final l = AppLocalizations.of(context);
     final items = [
-      {'icon': Icons.home_rounded, 'label': 'Home'},
-      {'icon': Icons.explore_outlined, 'label': 'Explore'},
-      {'icon': Icons.filter_center_focus_rounded, 'label': 'Scan'},
-      {'icon': Icons.shopping_bag_outlined, 'label': 'Market'},
-      {'icon': Icons.person_outline_rounded, 'label': 'Profile'},
+      {'icon': Icons.home_rounded, 'label': l.home},
+      {'icon': Icons.explore_outlined, 'label': l.explore},
+      {'icon': Icons.filter_center_focus_rounded, 'label': l.scan},
+      {'icon': Icons.shopping_bag_outlined, 'label': l.market},
+      {'icon': Icons.person_outline_rounded, 'label': l.profile},
     ];
 
     return Container(
@@ -355,7 +356,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       Navigator.of(context).pop();
                     } else if (i == 3) {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const MarketScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const market_screen.MarketScreen(),
+                        ),
                       );
                     } else if (i == 4) {
                       Navigator.of(context).push(
@@ -431,7 +434,7 @@ class _GridCard extends StatelessWidget {
                 variety.imagePath,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   color: const Color(0xFF2A3A3A),
                   child: const Icon(
                     Icons.eco_rounded,
@@ -553,7 +556,7 @@ class _ListCard extends StatelessWidget {
               width: 100,
               height: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: 100,
                 color: const Color(0xFF2A3A3A),
                 child: const Icon(

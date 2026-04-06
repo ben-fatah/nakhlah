@@ -1,20 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'scan_screen.dart';
-import 'explore_screen.dart';
-import 'manage_profile_screen.dart';
-
-// Simple localization helper
-class AppLocalizations {
-  static AppLocalizations of(BuildContext context) => AppLocalizations();
-
-  String get home => 'الرئيسية';
-  String get explore => 'استكشاف';
-  String get scan => 'مسح';
-  String get market => 'السوق';
-  String get profile => 'الملف الشخصي';
-}
+import '../screens/scan_screen.dart';
+import '../screens/explore_screen.dart';
+import '../screens/manage_profile_screen.dart';
 
 const Color _kBg = Color(0xFFF5F0EB);
 const Color _kBrown = Color(0xFF3B1F13);
@@ -443,7 +432,7 @@ class _MarketScreenState extends State<MarketScreen> {
           crossAxisCount: 2,
           crossAxisSpacing: 14,
           mainAxisSpacing: 14,
-          childAspectRatio: 0.85,
+          childAspectRatio: 0.68,
         ),
         itemCount: products.length,
         itemBuilder: (context, i) => _ProductCard(
@@ -478,13 +467,12 @@ class _MarketScreenState extends State<MarketScreen> {
 
   // ── Bottom Nav ─────────────────────────────────────────────────────────────
   Widget _buildBottomNav() {
-    final l = AppLocalizations.of(context);
     final items = [
-      {'icon': Icons.home_rounded, 'label': l.home},
-      {'icon': Icons.explore_outlined, 'label': l.explore},
-      {'icon': Icons.filter_center_focus_rounded, 'label': l.scan},
-      {'icon': Icons.shopping_bag_outlined, 'label': l.market},
-      {'icon': Icons.person_outline_rounded, 'label': l.profile},
+      {'icon': Icons.home_rounded, 'label': 'الرئيسية'},
+      {'icon': Icons.explore_outlined, 'label': 'استكشاف'},
+      {'icon': Icons.filter_center_focus_rounded, 'label': 'مسح'},
+      {'icon': Icons.shopping_bag_outlined, 'label': 'المتجر'},
+      {'icon': Icons.person_outline_rounded, 'label': 'حسابي'},
     ];
 
     return Directionality(

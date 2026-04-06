@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+
+  # ── Layer 3: AI Inference Microservice ──────────────────────────────────
+  ai_service:
+    build:
+      context: ./ai_service
+    container_name: nakhlah_ai
+    restart: unless-stopped
+    volumes:
+      # Mount your trained model weights here
+      - ./models:/app/models:ro
+    environment:
+      MODEL_PATH: models/nakhlah_model_v1.pth
+    ports:
+      - "8001:8001"       # expose for local testing; remove in prod
+    networks:
+      - nakhlah_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Layer 2: FastAPI Application Backend ────────────────────────────────
+  backend:
+    build:
+      context: .
+    container_name: nakhlah_backend
+    restart: unless-stopped
+    depends_on:
+      ai_service:
+        condition: service_healthy
+    volumes:
+      # Mount your Firebase service-account JSON here
+      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+    environment:
+      FIREBASE_CREDENTIALS: firebase-credentials.json
+      FIREBASE_STORAGE_BUCKET: your-project-id.appspot.com   # ← change this
+    ports:
+      - "8000:8000"
+    networks:
+      - nakhlah_net
+
+networks:
+  nakhlah_net:
+    driver: bridge
