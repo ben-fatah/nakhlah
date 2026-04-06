@@ -79,22 +79,51 @@ class _ScanScreenState extends State<ScanScreen>
   // ── Gallery Picker ────────────────────────────────────────────────────────
   Future<void> _pickFromGallery() async {
     try {
-      // Request photos permission on Android 13+
-      final status = await Permission.photos.request();
-      // On older Android, photos permission may not exist — check storage too
+      // Request photos permission (Android 13+ uses READ_MEDIA_IMAGES)
+      PermissionStatus status = await Permission.photos.request();
+      // Fallback for older Android
       if (!status.isGranted) {
-        final storageStatus = await Permission.storage.request();
-        if (!storageStatus.isGranted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Gallery permission is required'),
-                backgroundColor: Colors.red,
+        status = await Permission.storage.request();
+      }
+
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text(
+                'Gallery access was permanently denied. Please enable it in Settings to pick images.',
               ),
-            );
-          }
-          return;
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
         }
+        return;
+      }
+
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gallery permission is required'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
 
       final XFile? picked = await _picker.pickImage(

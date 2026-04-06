@@ -3,13 +3,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-// flutter_localizations import removed due to analyzer resolution issue
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/home_page.dart';
+import 'screens/onboarding_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  Nakhlah — Palm & Date Color Palette
@@ -23,11 +24,14 @@ const Color kBorderLight = Color(0xFFE5DFD8);
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const NakhlahApp());
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+  runApp(NakhlahApp(onboardingDone: onboardingDone));
 }
 
 class NakhlahApp extends StatelessWidget {
-  const NakhlahApp({super.key});
+  final bool onboardingDone;
+  const NakhlahApp({super.key, required this.onboardingDone});
 
   @override
   Widget build(BuildContext context) {
@@ -144,28 +148,34 @@ class NakhlahApp extends StatelessWidget {
           ),
 
           // ── Auth-Gated Root ───────────────────────────────────────────
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  backgroundColor: kPalmGreen,
-                  body: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.eco_rounded, size: 80, color: kGoldenDate),
-                        SizedBox(height: 16),
-                        CircularProgressIndicator(color: kGoldenDate),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              if (snapshot.hasData) return const HomePage();
-              return const SignInScreen();
-            },
-          ),
+          home: !onboardingDone
+              ? const OnboardingScreen()
+              : StreamBuilder<User?>(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Scaffold(
+                        backgroundColor: kPalmGreen,
+                        body: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.eco_rounded,
+                                size: 80,
+                                color: kGoldenDate,
+                              ),
+                              SizedBox(height: 16),
+                              CircularProgressIndicator(color: kGoldenDate),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    if (snapshot.hasData) return const HomePage();
+                    return const SignInScreen();
+                  },
+                ),
         );
       },
     );

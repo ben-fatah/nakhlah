@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../main.dart';
 import '../l10n/app_localizations.dart';
@@ -23,6 +27,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 
   bool _isLoading = false;
   bool _isFetching = true;
+  bool _isUploadingPhoto = false;
+  File? _pickedPhoto;
+  String? _photoUrl;
+  final _picker = ImagePicker();
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -52,13 +60,103 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         final data = snap.data()!;
         _nameCtrl.text = data['fullName'] ?? '';
         _emailCtrl.text = data['email'] ?? user.email ?? '';
+        _photoUrl = data['photoUrl'] ?? user.photoURL ?? '';
       } else if (mounted) {
         _emailCtrl.text = user.email ?? '';
+        _photoUrl = user.photoURL ?? '';
       }
     } catch (e) {
       if (mounted) _showSnackBar('Could not load profile.', isError: true);
     } finally {
       if (mounted) setState(() => _isFetching = false);
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    // Request permission
+    PermissionStatus status = await Permission.photos.request();
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+    }
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text(
+              'Permission Required',
+              style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+            ),
+            content: Text(
+              'Gallery access was denied. Please enable it in Settings to change your profile photo.',
+              style: GoogleFonts.cairo(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: GoogleFonts.cairo()),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  openAppSettings();
+                },
+                child: Text('Open Settings', style: GoogleFonts.cairo()),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+    if (!status.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gallery permission is required to change photo.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 512,
+    );
+    if (picked == null) return;
+
+    final file = File(picked.path);
+    setState(() {
+      _pickedPhoto = file;
+      _isUploadingPhoto = true;
+    });
+
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+      final ref = FirebaseStorage.instance.ref().child(
+        'profile_photos/${user.uid}.jpg',
+      );
+      await ref.putFile(file);
+      final url = await ref.getDownloadURL();
+      await _firestore.collection('users').doc(user.uid).set({
+        'photoUrl': url,
+      }, SetOptions(merge: true));
+      await user.updatePhotoURL(url);
+      if (mounted) {
+        setState(() => _photoUrl = url);
+        _showSnackBar('Profile photo updated!');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Failed to upload photo. Try again.', isError: true);
+        setState(() => _pickedPhoto = null);
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
     }
   }
 
@@ -227,33 +325,85 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: kGoldenDate,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          GestureDetector(
+            onTap: _pickAndUploadPhoto,
+            child: Stack(
+              children: [
+                Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: kGoldenDate,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: _isUploadingPhoto
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : _pickedPhoto != null
+                        ? Image.file(_pickedPhoto!, fit: BoxFit.cover)
+                        : (_photoUrl != null && _photoUrl!.isNotEmpty)
+                        ? Image.network(
+                            _photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                _userInitial,
+                                style: GoogleFonts.cairo(
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              _userInitial,
+                              style: GoogleFonts.cairo(
+                                fontSize: 38,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                // Camera badge
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: kGoldenDate,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
                 ),
               ],
-            ),
-            child: Center(
-              child: Text(
-                _userInitial,
-                style: GoogleFonts.cairo(
-                  fontSize: 38,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
             ),
           ),
           const SizedBox(height: 14),

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
 import 'scan_screen.dart';
+import 'explore_screen.dart';
+import 'market_screen.dart';
 import '../providers/locale_provider.dart';
 import '../l10n/app_localizations.dart';
 
@@ -69,10 +71,22 @@ class _HomePageState extends State<HomePage> {
         marketLabel: l10n.market,
         profileLabel: l10n.profile,
         onTap: (i) {
+          if (i == 1) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ExploreScreen()));
+            return;
+          }
           if (i == 2) {
             Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const ScanScreen()));
+            return;
+          }
+          if (i == 3) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const MarketScreen()));
             return;
           }
           if (i == 4) {
@@ -89,7 +103,7 @@ class _HomePageState extends State<HomePage> {
         child: SingleChildScrollView(
           child: Builder(
             builder: (context) {
-              final l10n = AppLocalizations.of(context);
+              final l = AppLocalizations.of(context);
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -102,9 +116,9 @@ class _HomePageState extends State<HomePage> {
 
                   //  Scan card
                   _ScanCard(
-                    label: l10n.scanDates,
-                    subtitle: l10n.identifyInSeconds,
-                    buttonLabel: l10n.scanNow,
+                    label: l.scanDates,
+                    subtitle: l.identifyInSeconds,
+                    buttonLabel: l.scanNow,
                     onScan: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ScanScreen()),
                     ),
@@ -114,12 +128,18 @@ class _HomePageState extends State<HomePage> {
 
                   //  Quick actions row
                   _QuickActions(
-                    scanLabel: l10n.scan,
-                    exploreLabel: l10n.explore,
-                    marketLabel: l10n.market,
-                    historyLabel: l10n.history,
+                    scanLabel: l.scan,
+                    exploreLabel: l.explore,
+                    marketLabel: l.market,
+                    historyLabel: l.history,
                     onScan: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ScanScreen()),
+                    ),
+                    onExplore: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ExploreScreen()),
+                    ),
+                    onMarket: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MarketScreen()),
                     ),
                     onProfile: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -132,8 +152,8 @@ class _HomePageState extends State<HomePage> {
 
                   //  Recent scans
                   _SectionHeader(
-                    title: l10n.recentScans,
-                    actionLabel: l10n.viewAll,
+                    title: l.recentScans,
+                    actionLabel: l.viewAll,
                     onAction: () {},
                   ),
                   const SizedBox(height: 14),
@@ -152,9 +172,11 @@ class _HomePageState extends State<HomePage> {
 
                   //  Featured sellers
                   _SectionHeader(
-                    title: l10n.featuredSellers,
-                    actionLabel: l10n.exploreAll,
-                    onAction: () {},
+                    title: l.featuredSellers,
+                    actionLabel: l.exploreAll,
+                    onAction: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MarketScreen()),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
@@ -168,7 +190,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                 ],
               );
             },
@@ -357,6 +379,8 @@ class _ScanCard extends StatelessWidget {
 
 class _QuickActions extends StatelessWidget {
   final VoidCallback onScan;
+  final VoidCallback onExplore;
+  final VoidCallback onMarket;
   final VoidCallback onProfile;
   final String scanLabel;
   final String exploreLabel;
@@ -365,6 +389,8 @@ class _QuickActions extends StatelessWidget {
 
   const _QuickActions({
     required this.onScan,
+    required this.onExplore,
+    required this.onMarket,
     required this.onProfile,
     required this.scanLabel,
     required this.exploreLabel,
@@ -383,12 +409,12 @@ class _QuickActions extends StatelessWidget {
       _QuickAction(
         icon: Icons.explore_outlined,
         label: exploreLabel,
-        onTap: () {},
+        onTap: onExplore,
       ),
       _QuickAction(
         icon: Icons.storefront_outlined,
         label: marketLabel,
-        onTap: () {},
+        onTap: onMarket,
       ),
       _QuickAction(
         icon: Icons.history_rounded,
