@@ -123,23 +123,63 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   Future<void> _uploadPhoto(File file) async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return;
-      final ref = FirebaseStorage.instance.ref().child(
+      if (user == null) {
+        debugPrint('[ProfilePhoto] No user signed in');
+        return;
+      }
+
+      debugPrint('[ProfilePhoto] Starting upload for user: ${user.uid}');
+      debugPrint('[ProfilePhoto] File path: ${file.path}');
+      debugPrint('[ProfilePhoto] File exists: ${file.existsSync()}');
+      debugPrint('[ProfilePhoto] File size: ${file.lengthSync()} bytes');
+
+      final storageRef = FirebaseStorage.instance.ref().child(
         'profile_photos/${user.uid}.jpg',
       );
-      await ref.putFile(file);
-      final url = await ref.getDownloadURL();
+
+      debugPrint('[ProfilePhoto] Uploading to: ${storageRef.fullPath}');
+      final uploadTask = storageRef.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((snapshot) {
+        final progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        debugPrint('[ProfilePhoto] Upload progress: ${progress.toStringAsFixed(1)}%');
+      });
+
+      await uploadTask;
+      debugPrint('[ProfilePhoto] Upload complete, getting download URL...');
+
+      final url = await storageRef.getDownloadURL();
+      debugPrint('[ProfilePhoto] Download URL: $url');
+
       await _firestore.collection('users').doc(user.uid).set({
         'photoUrl': url,
       }, SetOptions(merge: true));
+      debugPrint('[ProfilePhoto] Firestore updated with photoUrl');
+
       await user.updatePhotoURL(url);
+      debugPrint('[ProfilePhoto] Auth profile updated with photoURL');
+
       if (mounted) {
         setState(() => _photoUrl = url);
         _showSnackBar('Profile photo updated!');
       }
-    } catch (e) {
+    } on FirebaseException catch (e) {
+      debugPrint('[ProfilePhoto] FirebaseException: ${e.code} - ${e.message}');
+      debugPrint('[ProfilePhoto] Plugin: ${e.plugin}');
       if (mounted) {
-        _showSnackBar('Failed to upload photo. Try again.', isError: true);
+        _showSnackBar('Firebase error: ${e.message ?? e.code}', isError: true);
+        setState(() => _pickedPhoto = null);
+      }
+    } catch (e, st) {
+      debugPrint('[ProfilePhoto] Unexpected error: $e');
+      debugPrint('[ProfilePhoto] StackTrace: $st');
+      if (mounted) {
+        _showSnackBar('Failed to upload photo: $e', isError: true);
         setState(() => _pickedPhoto = null);
       }
     } finally {
