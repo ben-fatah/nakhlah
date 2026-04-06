@@ -32,7 +32,7 @@ class _Product {
     required this.unit,
     required this.imagePath,
     required this.tag,
-    this.isVerified = true,
+    required this.isVerified,
   });
 }
 
@@ -45,6 +45,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل كغ',
     imagePath: 'assets/images/medjool.png',
     tag: 'medjool',
+    isVerified: true,
   ),
   _Product(
     name: 'عجوة المدينة المنورة',
@@ -54,6 +55,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل كغ',
     imagePath: 'assets/images/ajwa.png',
     tag: 'ajwa',
+    isVerified: true,
   ),
   _Product(
     name: 'خلاص القصيم كرتون',
@@ -63,6 +65,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل ٣ كغ',
     imagePath: 'assets/images/khalas.png',
     tag: 'khalas',
+    isVerified: false,
   ),
   _Product(
     name: 'سكري مفتل درجة أولى',
@@ -72,6 +75,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل كغ',
     imagePath: 'assets/images/sukari.png',
     tag: 'sukkari',
+    isVerified: true,
   ),
   _Product(
     name: 'برحي ذهبي طازج',
@@ -81,6 +85,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل كغ',
     imagePath: 'assets/images/barhi.png',
     tag: 'barhi',
+    isVerified: false,
   ),
   _Product(
     name: 'صقعي ممتاز',
@@ -90,6 +95,7 @@ const List<_Product> _allProducts = [
     unit: 'لكل كغ',
     imagePath: 'assets/images/sagai.png',
     tag: 'sagai',
+    isVerified: false,
   ),
 ];
 
