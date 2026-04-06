@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart'; // palette constants
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
 import 'home_page.dart';
@@ -229,7 +230,7 @@ class _SignInScreenState extends State<SignInScreen>
 
                   // ── Title ─────────────────────────────────────────────
                   Text(
-                    'WELCOME BACK',
+                    AppLocalizations.of(context).welcomeBack,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.cairo(
                       fontSize: 22,
@@ -242,7 +243,7 @@ class _SignInScreenState extends State<SignInScreen>
 
                   // ── Email ─────────────────────────────────────────────
                   _buildField(
-                    label: 'Email',
+                    label: AppLocalizations.of(context).email,
                     hint: 'example@mail.com',
                     icon: Icons.email_outlined,
                     controller: _emailCtrl,
@@ -263,7 +264,7 @@ class _SignInScreenState extends State<SignInScreen>
 
                   // ── Password ──────────────────────────────────────────
                   _buildField(
-                    label: 'Password',
+                    label: AppLocalizations.of(context).password,
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
                     controller: _passwordCtrl,
@@ -294,7 +295,7 @@ class _SignInScreenState extends State<SignInScreen>
                       ),
                       style: TextButton.styleFrom(foregroundColor: _kLinkBrown),
                       child: Text(
-                        'Forgot Password?',
+                        AppLocalizations.of(context).forgotPassword,
                         style: GoogleFonts.cairo(
                           fontWeight: FontWeight.w600,
                           color: _kLinkBrown,
@@ -369,7 +370,7 @@ class _SignInScreenState extends State<SignInScreen>
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : const Text('Sign In'),
+                          : Text(AppLocalizations.of(context).signIn),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -488,7 +489,9 @@ class _SignInScreenState extends State<SignInScreen>
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Continue with Google',
+                                  AppLocalizations.of(
+                                    context,
+                                  ).continueWithGoogle,
                                   style: GoogleFonts.cairo(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -506,7 +509,7 @@ class _SignInScreenState extends State<SignInScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        AppLocalizations.of(context).noAccount,
                         style: GoogleFonts.cairo(
                           fontSize: 14,
                           color: _kTermsText,
@@ -519,7 +522,7 @@ class _SignInScreenState extends State<SignInScreen>
                           ),
                         ),
                         child: Text(
-                          'Sign Up',
+                          AppLocalizations.of(context).signUp,
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,

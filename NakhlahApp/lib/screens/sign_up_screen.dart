@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart'; // palette constants
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'sign_in_screen.dart';
 import 'home_page.dart';
 
@@ -293,7 +294,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
                   // ── Title ───────────────────────────────────────────────
                   Text(
-                    'CREATE ACCOUNT',
+                    AppLocalizations.of(context).createAccount,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.cairo(
                       fontSize: 22,
@@ -306,7 +307,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
                   // ── Full Name ───────────────────────────────────────────
                   _buildField(
-                    label: 'Full Name',
+                    label: AppLocalizations.of(context).fullName,
                     hint: 'Ali Al-Otaibi',
                     icon: Icons.person_outline_rounded,
                     controller: _nameCtrl,
@@ -319,7 +320,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
                   // ── Email ───────────────────────────────────────────────
                   _buildField(
-                    label: 'Email',
+                    label: AppLocalizations.of(context).email,
                     hint: 'example@mail.com',
                     icon: Icons.email_outlined,
                     controller: _emailCtrl,
@@ -340,7 +341,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
                   // ── Password ────────────────────────────────────────────
                   _buildField(
-                    label: 'Password',
+                    label: AppLocalizations.of(context).password,
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
                     controller: _passwordCtrl,
@@ -435,7 +436,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : const Text('Sign Up'),
+                          : Text(AppLocalizations.of(context).signUp),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -526,7 +527,9 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  'Continue with Google',
+                                  AppLocalizations.of(
+                                    context,
+                                  ).continueWithGoogle,
                                   style: GoogleFonts.cairo(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -585,7 +588,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Already have an account? ',
+                        AppLocalizations.of(context).alreadyAccount,
                         style: GoogleFonts.cairo(
                           fontSize: 14,
                           color: _kTermsText,
@@ -598,7 +601,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                           ),
                         ),
                         child: Text(
-                          'Sign In',
+                          AppLocalizations.of(context).signIn,
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,

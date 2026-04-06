@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
 import 'scan_screen.dart';
+import '../providers/locale_provider.dart';
+import '../l10n/app_localizations.dart';
 
 //  Colour tokens matching the screenshot
 const Color kBrown900 = Color(0xFF3B1F13); // dark header background
@@ -56,10 +58,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: kBrown100,
       bottomNavigationBar: _BottomNav(
         selectedIndex: _selectedIndex,
+        homeLabel: l10n.home,
+        exploreLabel: l10n.explore,
+        scanLabel: l10n.scan,
+        marketLabel: l10n.market,
+        profileLabel: l10n.profile,
         onTap: (i) {
           if (i == 2) {
             Navigator.of(
@@ -77,80 +85,93 @@ class _HomePageState extends State<HomePage> {
         },
       ),
       body: SafeArea(
-        bottom: false,
+        bottom: true,
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              //  Dark header
-              _Header(
-                firstName: _firstName,
-                onNotification: () {},
-                onLanguage: () {},
-              ),
-
-              //  Scan card
-              _ScanCard(
-                onScan: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
-              ),
-
-              const SizedBox(height: 28),
-
-              //  Quick actions row
-              _QuickActions(
-                onScan: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
-                onProfile: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ManageProfileScreen(),
+          child: Builder(
+            builder: (context) {
+              final l10n = AppLocalizations.of(context);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  //  Dark header
+                  _Header(
+                    firstName: _firstName,
+                    onNotification: () {},
+                    onLanguage: () => localeProvider.toggleLocale(),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 28),
+                  //  Scan card
+                  _ScanCard(
+                    label: l10n.scanDates,
+                    subtitle: l10n.identifyInSeconds,
+                    buttonLabel: l10n.scanNow,
+                    onScan: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScanScreen()),
+                    ),
+                  ),
 
-              //  Recent scans
-              _SectionHeader(
-                title: 'Recent Scans',
-                actionLabel: 'View all',
-                onAction: () {},
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 190,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _recentScans.length,
-                  itemBuilder: (context, i) =>
-                      _ScanCard2(item: _recentScans[i]),
-                ),
-              ),
+                  const SizedBox(height: 28),
 
-              const SizedBox(height: 28),
+                  //  Quick actions row
+                  _QuickActions(
+                    scanLabel: l10n.scan,
+                    exploreLabel: l10n.explore,
+                    marketLabel: l10n.market,
+                    historyLabel: l10n.history,
+                    onScan: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScanScreen()),
+                    ),
+                    onProfile: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ManageProfileScreen(),
+                      ),
+                    ),
+                  ),
 
-              //  Featured sellers
-              _SectionHeader(
-                title: 'Featured Sellers',
-                actionLabel: 'Explore All',
-                onAction: () {},
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 140,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _sellers.length,
-                  itemBuilder: (context, i) => _SellerCard(item: _sellers[i]),
-                ),
-              ),
+                  const SizedBox(height: 28),
 
-              const SizedBox(height: 100), // nav bar clearance
-            ],
+                  //  Recent scans
+                  _SectionHeader(
+                    title: l10n.recentScans,
+                    actionLabel: l10n.viewAll,
+                    onAction: () {},
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 190,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: _recentScans.length,
+                      itemBuilder: (context, i) =>
+                          _ScanCard2(item: _recentScans[i]),
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  //  Featured sellers
+                  _SectionHeader(
+                    title: l10n.featuredSellers,
+                    actionLabel: l10n.exploreAll,
+                    onAction: () {},
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 140,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: _sellers.length,
+                      itemBuilder: (context, i) =>
+                          _SellerCard(item: _sellers[i]),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -224,8 +245,16 @@ class _Header extends StatelessWidget {
 
 class _ScanCard extends StatelessWidget {
   final VoidCallback onScan;
+  final String label;
+  final String subtitle;
+  final String buttonLabel;
 
-  const _ScanCard({required this.onScan});
+  const _ScanCard({
+    required this.onScan,
+    required this.label,
+    required this.subtitle,
+    required this.buttonLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +279,7 @@ class _ScanCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Scan Dates',
+                  label,
                   style: GoogleFonts.cairo(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -259,7 +288,7 @@ class _ScanCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Identify date varieties in seconds',
+                  subtitle,
                   style: GoogleFonts.cairo(
                     fontSize: 13,
                     color: Colors.grey.shade600,
@@ -287,7 +316,7 @@ class _ScanCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Scan Now',
+                          buttonLabel,
                           style: GoogleFonts.cairo(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -329,28 +358,43 @@ class _ScanCard extends StatelessWidget {
 class _QuickActions extends StatelessWidget {
   final VoidCallback onScan;
   final VoidCallback onProfile;
+  final String scanLabel;
+  final String exploreLabel;
+  final String marketLabel;
+  final String historyLabel;
 
-  const _QuickActions({required this.onScan, required this.onProfile});
+  const _QuickActions({
+    required this.onScan,
+    required this.onProfile,
+    required this.scanLabel,
+    required this.exploreLabel,
+    required this.marketLabel,
+    required this.historyLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     final actions = [
       _QuickAction(
         icon: Icons.qr_code_scanner_rounded,
-        label: 'Scan',
+        label: scanLabel,
         onTap: onScan,
       ),
       _QuickAction(
         icon: Icons.explore_outlined,
-        label: 'Explore',
+        label: exploreLabel,
         onTap: () {},
       ),
       _QuickAction(
         icon: Icons.storefront_outlined,
-        label: 'Market',
+        label: marketLabel,
         onTap: () {},
       ),
-      _QuickAction(icon: Icons.history_rounded, label: 'History', onTap: () {}),
+      _QuickAction(
+        icon: Icons.history_rounded,
+        label: historyLabel,
+        onTap: () {},
+      ),
     ];
 
     return Padding(
@@ -686,8 +730,21 @@ class _SellerItem {
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
+  final String homeLabel;
+  final String exploreLabel;
+  final String scanLabel;
+  final String marketLabel;
+  final String profileLabel;
 
-  const _BottomNav({required this.selectedIndex, required this.onTap});
+  const _BottomNav({
+    required this.selectedIndex,
+    required this.onTap,
+    required this.homeLabel,
+    required this.exploreLabel,
+    required this.scanLabel,
+    required this.marketLabel,
+    required this.profileLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -710,14 +767,14 @@ class _BottomNav extends StatelessWidget {
             children: [
               _NavItem(
                 icon: Icons.home_rounded,
-                label: 'Home',
+                label: homeLabel,
                 index: 0,
                 selected: selectedIndex,
                 onTap: onTap,
               ),
               _NavItem(
                 icon: Icons.explore_outlined,
-                label: 'Explore',
+                label: exploreLabel,
                 index: 1,
                 selected: selectedIndex,
                 onTap: onTap,
@@ -752,7 +809,7 @@ class _BottomNav extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Scan',
+                        scanLabel,
                         style: GoogleFonts.cairo(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -766,14 +823,14 @@ class _BottomNav extends StatelessWidget {
 
               _NavItem(
                 icon: Icons.shopping_bag_outlined,
-                label: 'Market',
+                label: marketLabel,
                 index: 3,
                 selected: selectedIndex,
                 onTap: onTap,
               ),
               _NavItem(
                 icon: Icons.person_outline_rounded,
-                label: 'Profile',
+                label: profileLabel,
                 index: 4,
                 selected: selectedIndex,
                 onTap: onTap,
