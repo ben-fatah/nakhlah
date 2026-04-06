@@ -72,68 +72,55 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
+  // ── Photo Picker ────────────────────────────────────────────────────────
+  // We call image_picker DIRECTLY — it triggers the native OS permission
+  // dialog on its own, exactly like WhatsApp, Instagram, etc.
+  // We only call openAppSettings() if the user already permanently denied.
   Future<void> _pickAndUploadPhoto() async {
-    // Request permission
-    PermissionStatus status = await Permission.photos.request();
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
-    if (status.isPermanentlyDenied) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: Text(
-              'Permission Required',
-              style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
-            ),
-            content: Text(
-              'Gallery access was denied. Please enable it in Settings to change your profile photo.',
-              style: GoogleFonts.cairo(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: GoogleFonts.cairo()),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  openAppSettings();
-                },
-                child: Text('Open Settings', style: GoogleFonts.cairo()),
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gallery permission is required to change photo.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    // Check current status WITHOUT requesting — so we don't pre-block
+    final currentStatus = await Permission.photos.status;
+    final storageStatus = await Permission.storage.status;
+
+    // If already permanently denied → send user to Settings
+    if (currentStatus.isPermanentlyDenied &&
+        storageStatus.isPermanentlyDenied) {
+      if (mounted) _showSettingsDialog();
       return;
     }
 
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 512,
-    );
-    if (picked == null) return;
+    // Otherwise just open the picker — the OS will show the permission
+    // dialog automatically on first use (Android & iOS both handle this)
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 512,
+      );
 
-    final file = File(picked.path);
-    setState(() {
-      _pickedPhoto = file;
-      _isUploadingPhoto = true;
-    });
+      if (picked == null) return; // user cancelled
 
+      final file = File(picked.path);
+      setState(() {
+        _pickedPhoto = file;
+        _isUploadingPhoto = true;
+      });
+
+      await _uploadPhoto(file);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('permission') ||
+          msg.contains('denied') ||
+          msg.contains('access')) {
+        if (mounted) _showSettingsDialog();
+      } else {
+        if (mounted) {
+          _showSnackBar('Could not open gallery. Try again.', isError: true);
+        }
+      }
+    }
+  }
+
+  Future<void> _uploadPhoto(File file) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return;
@@ -158,6 +145,51 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     } finally {
       if (mounted) setState(() => _isUploadingPhoto = false);
     }
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(
+          'Permission Required',
+          style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Gallery access is blocked. Please open Settings → App Permissions → Photos and allow access.',
+          style: GoogleFonts.cairo(fontSize: 14, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.cairo(color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5C3A1E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: Text(
+              'Open Settings',
+              style: GoogleFonts.cairo(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveChanges() async {
@@ -199,13 +231,14 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ? Colors.red.shade700
             : const Color(0xFF5C3A1E),
         margin: const EdgeInsets.all(16),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
   void _toggleLanguage() {
     localeProvider.toggleLocale();
-    // Small feedback snackbar
     final isNowArabic = localeProvider.isArabic;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -214,6 +247,8 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         ),
         backgroundColor: const Color(0xFF5C3A1E),
         margin: const EdgeInsets.all(16),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -326,6 +361,8 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // ── Tappable avatar ──────────────────────────────────────────
           GestureDetector(
             onTap: _pickAndUploadPhoto,
             child: Stack(
@@ -385,7 +422,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                           ),
                   ),
                 ),
-                // Camera badge
+                // Gold camera badge
                 Positioned(
                   bottom: 0,
                   right: 0,
@@ -407,6 +444,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               ],
             ),
           ),
+
           const SizedBox(height: 14),
           Text(
             name,
@@ -554,7 +592,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       child: Column(
         children: [
-          // ── Language Toggle ───────────────────────────────────────────
           _SettingsTile(
             icon: Icons.language_rounded,
             label: l.changeLanguage,
@@ -659,6 +696,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   }
 }
 
+// ── Stat Card ─────────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
@@ -722,6 +760,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ── Settings Tile ─────────────────────────────────────────────────────────────
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
