@@ -6,6 +6,18 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart'; // palette constants
 
+// ── Design tokens matching sign-up / sign-in ────────────────────────────────
+const Color _kBgCream = Color(0xFFFAF6F1);
+const Color _kFieldBg = Color(0xFFFFFDFA);
+const Color _kFieldBorder = Color(0xFFE8E0D6);
+const Color _kFieldIcon = Color(0xFF8B7355);
+const Color _kLabelColor = Color(0xFF5C4A3A);
+const Color _kHintColor = Color(0xFFBDB0A3);
+const Color _kTitleColor = Color(0xFF3E2C1F);
+const Color _kButtonBg = Color(0xFF4A3728);
+const Color _kLinkBrown = Color(0xFF6B4F3A);
+const Color _kTermsText = Color(0xFF9E8E7E);
+
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
 
@@ -105,55 +117,155 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
+      backgroundColor: _kBgCream,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Header ──────────────────────────────────────────────
-                const Icon(Icons.lock_reset_rounded,
-                    size: 64, color: kPalmGreen),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+
+                // ── Back Arrow ──────────────────────────────────────────
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: _kTitleColor,
+                      size: 24,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // ── Header Icon ─────────────────────────────────────────
+                Center(
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: _kFieldBg,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _kFieldBorder, width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.lock_reset_rounded,
+                      size: 40,
+                      color: _kFieldIcon,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── Title ───────────────────────────────────────────────
                 Text(
-                  'Forgot your password?',
+                  'RESET PASSWORD',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.cairo(
                     fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: kPalmGreen,
+                    fontWeight: FontWeight.w800,
+                    color: _kTitleColor,
+                    letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   "Enter your email and we'll send a reset link.",
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.cairo(
-                    fontSize: 13,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: GoogleFonts.cairo(fontSize: 14, color: _kTermsText),
                 ),
                 const SizedBox(height: 36),
 
                 // ── Email Field ─────────────────────────────────────────
-                TextFormField(
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email Address',
-                    hintText: 'you@example.com',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required.';
-                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
-                      return 'Enter a valid email address.';
-                    }
-                    return null;
-                  },
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Email',
+                      style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kLabelColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      style: GoogleFonts.cairo(
+                        fontSize: 15,
+                        color: _kTitleColor,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'example@mail.com',
+                        hintStyle: GoogleFonts.cairo(
+                          fontSize: 14,
+                          color: _kHintColor,
+                        ),
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 14, right: 10),
+                          child: Icon(
+                            Icons.email_outlined,
+                            size: 20,
+                            color: _kFieldIcon,
+                          ),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 0,
+                        ),
+                        filled: true,
+                        fillColor: _kFieldBg,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: _kFieldBorder),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: _kFieldBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: _kFieldIcon,
+                            width: 1.5,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.red.shade400),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.red.shade400,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Email is required.';
+                        }
+                        if (!RegExp(
+                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                        ).hasMatch(v.trim())) {
+                          return 'Enter a valid email address.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 28),
 
@@ -161,8 +273,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 SizedBox(
                   height: 54,
                   child: ElevatedButton(
-                    onPressed:
-                        (_isLoading || _cooldown > 0) ? null : _sendResetEmail,
+                    onPressed: (_isLoading || _cooldown > 0)
+                        ? null
+                        : _sendResetEmail,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kButtonBg,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: _kButtonBg.withValues(
+                        alpha: 0.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      elevation: 0,
+                      textStyle: GoogleFonts.cairo(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     child: _isLoading
                         ? const SizedBox(
                             width: 24,
@@ -188,26 +316,31 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          kPalmGreen.withValues(alpha: 0.07),
-                          kGoldenDate.withValues(alpha: 0.08),
+                          _kFieldIcon.withValues(alpha: 0.07),
+                          _kLinkBrown.withValues(alpha: 0.08),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: kPalmGreen.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: _kFieldIcon.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.mark_email_read_outlined,
-                            color: kPalmGreen, size: 36),
+                        Icon(
+                          Icons.mark_email_read_outlined,
+                          color: _kFieldIcon,
+                          size: 36,
+                        ),
                         const SizedBox(height: 10),
                         Text(
                           'Reset link sent!',
                           style: GoogleFonts.cairo(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
-                            color: kPalmGreen,
+                            color: _kTitleColor,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -216,7 +349,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.cairo(
                             fontSize: 13,
-                            color: kPalmGreen.withValues(alpha: 0.8),
+                            color: _kTermsText,
                           ),
                         ),
                       ],
@@ -225,14 +358,33 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                 const SizedBox(height: 24),
 
-                // ── Back ────────────────────────────────────────────────
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                    label: const Text('Back to Sign In'),
-                  ),
+                // ── Back to Sign In ─────────────────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Remember your password? ',
+                      style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        color: _kTermsText,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'Sign In',
+                        style: GoogleFonts.cairo(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _kTitleColor,
+                          decoration: TextDecoration.underline,
+                          decorationColor: _kTitleColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 32),
               ],
             ),
           ),

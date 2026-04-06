@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../main.dart'; // kPalmGreen, kGoldenDate, kOffWhite, kCardWhite, kBorderLight
+import '../services/auth_service.dart';
 import 'sign_in_screen.dart';
 
 class ManageProfileScreen extends StatefulWidget {
@@ -98,7 +99,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   Future<void> _signOut() async {
-    await _auth.signOut();
+    await AuthService.signOut();
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const SignInScreen()),
@@ -217,8 +218,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded,
-                      color: Colors.white),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                  ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 const Spacer(),
@@ -444,8 +447,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           _SettingsTile(
             icon: Icons.restaurant_rounded,
             label: 'Dietary Goals',
-            trailing: const Icon(Icons.chevron_right_rounded,
-                color: kGoldenDate, size: 22),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: kGoldenDate,
+              size: 22,
+            ),
             onTap: () => _showSnackBar('Dietary goals coming soon!'),
           ),
           const Divider(height: 1, indent: 56, endIndent: 16),
