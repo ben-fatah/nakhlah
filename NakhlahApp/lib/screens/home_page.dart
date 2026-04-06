@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
 import 'scan_screen.dart';
@@ -48,12 +49,50 @@ class _HomePageState extends State<HomePage> {
     _SellerItem(name: 'Royal Oasis', rating: 4.8, reviews: '850', isTop: true),
   ];
 
-  String get _firstName {
-    final name =
-        FirebaseAuth.instance.currentUser?.displayName ??
-        FirebaseAuth.instance.currentUser?.email ??
-        'User';
-    return name.split(' ').first.split('@').first;
+  String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    // Try displayName first
+    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
+      if (mounted) {
+        setState(() => _firstName = user.displayName!.split(' ').first);
+      }
+      return;
+    }
+
+    // Fallback: read fullName from Firestore
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final fullName = doc.data()?['fullName'] as String? ?? '';
+      if (fullName.isNotEmpty) {
+        // Also update the Auth profile so next time it's instant
+        await user.updateDisplayName(fullName);
+        if (mounted) {
+          setState(() => _firstName = fullName.split(' ').first);
+        }
+      } else {
+        // Last resort: use email prefix
+        if (mounted) {
+          setState(() => _firstName = (user.email ?? 'User').split('@').first);
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _firstName = (user.email ?? 'User').split('@').first);
+      }
+    }
   }
 
   @override

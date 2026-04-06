@@ -103,6 +103,10 @@ class _SignUpScreenState extends State<SignUpScreen>
         password: _passwordCtrl.text.trim(),
       );
 
+      // Set the display name on the Firebase Auth profile
+      await credential.user!.updateDisplayName(_nameCtrl.text.trim());
+      await credential.user!.reload();
+
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
