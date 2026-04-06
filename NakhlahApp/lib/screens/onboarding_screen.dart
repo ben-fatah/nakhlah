@@ -68,11 +68,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset(
-                    'assets/icon.png',
-                    height: 32,
-                    fit: BoxFit.contain,
-                  ),
                   TextButton(
                     onPressed: _finishOnboarding,
                     child: const Text(

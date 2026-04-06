@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Flutter-3.22.x-blue?logo=flutter" />
+  <img src="https://img.shields.io/badge/Flutter-3.41.6-blue?logo=flutter" />
   <img src="https://img.shields.io/badge/Dart-3.4-blue?logo=dart" />
   <img src="https://img.shields.io/badge/Java-17_LTS-orange?logo=openjdk" />
   <img src="https://img.shields.io/badge/Python-3.10-yellow?logo=python" />

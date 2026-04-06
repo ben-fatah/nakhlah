@@ -11,7 +11,7 @@ const Color kBrown900 = Color(0xFF3B1F13); // dark header background
 const Color kBrown700 = Color(0xFF5C3A1E); // buttons, accents
 const Color kBrown100 = Color(0xFFF2EDE8); // page background
 const Color kGoldBadge = Color(0xFFE8B84B); // match badge, TOP badge
-const Color kCardBg   = Color(0xFFEAE4DE); // scan card background
+const Color kCardBg = Color(0xFFEAE4DE); // scan card background
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,14 +25,27 @@ class _HomePageState extends State<HomePage> {
 
   // ── mock recent scans data ────────────────────────────────────────────────
   final List<_ScanItem> _recentScans = const [
-    _ScanItem(name: 'Ajwa',    match: 98, imageAsset: 'assets/images/ajwa.png'),
-    _ScanItem(name: 'Medjool', match: 92, imageAsset: 'assets/images/medjool.png'),
-    _ScanItem(name: 'Sukari',  match: 85, imageAsset: 'assets/images/sukari.png'),
+    _ScanItem(name: 'Ajwa', match: 98, imageAsset: 'assets/images/ajwa.png'),
+    _ScanItem(
+      name: 'Medjool',
+      match: 92,
+      imageAsset: 'assets/images/medjool.png',
+    ),
+    _ScanItem(
+      name: 'Sukari',
+      match: 85,
+      imageAsset: 'assets/images/sukari.png',
+    ),
   ];
 
   final List<_SellerItem> _sellers = const [
-    _SellerItem(name: 'Al-Madina Farms', rating: 4.9, reviews: '1.2k', isTop: true),
-    _SellerItem(name: 'Royal Oasis',     rating: 4.8, reviews: '850',  isTop: true),
+    _SellerItem(
+      name: 'Al-Madina Farms',
+      rating: 4.9,
+      reviews: '1.2k',
+      isTop: true,
+    ),
+    _SellerItem(name: 'Royal Oasis', rating: 4.8, reviews: '850', isTop: true),
   ];
 
   // ── sign out ──────────────────────────────────────────────────────────────
@@ -47,9 +60,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   String get _firstName {
-    final name = FirebaseAuth.instance.currentUser?.displayName
-        ?? FirebaseAuth.instance.currentUser?.email
-        ?? 'User';
+    final name =
+        FirebaseAuth.instance.currentUser?.displayName ??
+        FirebaseAuth.instance.currentUser?.email ??
+        'User';
     return name.split(' ').first.split('@').first;
   }
 
@@ -61,9 +75,9 @@ class _HomePageState extends State<HomePage> {
         selectedIndex: _selectedIndex,
         onTap: (i) {
           if (i == 2) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ScanScreen()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ScanScreen()));
             return;
           }
           setState(() => _selectedIndex = i);
@@ -84,27 +98,33 @@ class _HomePageState extends State<HomePage> {
 
               // ── Scan card ─────────────────────────────────────────────
               _ScanCard(
-                onScan: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ScanScreen()),
-                ),
+                onScan: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
               ),
 
               const SizedBox(height: 28),
 
               // ── Quick actions row ─────────────────────────────────────
               _QuickActions(
-                onScan: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ScanScreen()),
-                ),
+                onScan: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
                 onProfile: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ManageProfileScreen(),
+                  ),
                 ),
               ),
 
               const SizedBox(height: 28),
 
               // ── Recent scans ──────────────────────────────────────────
-              _SectionHeader(title: 'Recent Scans', actionLabel: 'View all', onAction: () {}),
+              _SectionHeader(
+                title: 'Recent Scans',
+                actionLabel: 'View all',
+                onAction: () {},
+              ),
               const SizedBox(height: 14),
               SizedBox(
                 height: 190,
@@ -112,14 +132,19 @@ class _HomePageState extends State<HomePage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: _recentScans.length,
-                  itemBuilder: (context, i) => _ScanCard2(item: _recentScans[i]),
+                  itemBuilder: (context, i) =>
+                      _ScanCard2(item: _recentScans[i]),
                 ),
               ),
 
               const SizedBox(height: 28),
 
               // ── Featured sellers ──────────────────────────────────────
-              _SectionHeader(title: 'Featured Sellers', actionLabel: 'Explore All', onAction: () {}),
+              _SectionHeader(
+                title: 'Featured Sellers',
+                actionLabel: 'Explore All',
+                onAction: () {},
+              ),
               const SizedBox(height: 14),
               SizedBox(
                 height: 140,
@@ -168,7 +193,11 @@ class _Header extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.language_rounded, color: Colors.white70, size: 22),
+                icon: const Icon(
+                  Icons.language_rounded,
+                  color: Colors.white70,
+                  size: 22,
+                ),
                 onPressed: onLanguage,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -177,7 +206,11 @@ class _Header extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+                    icon: const Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     onPressed: onNotification,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -270,7 +303,10 @@ class _ScanCard extends StatelessWidget {
                 GestureDetector(
                   onTap: onScan,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: kBrown700,
                       borderRadius: BorderRadius.circular(14),
@@ -278,8 +314,11 @@ class _ScanCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.filter_center_focus_rounded,
-                            color: Colors.white, size: 18),
+                        const Icon(
+                          Icons.filter_center_focus_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Scan Now',
@@ -305,8 +344,11 @@ class _ScanCard extends StatelessWidget {
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.camera_alt_rounded,
-                color: Colors.grey.shade400, size: 36),
+            child: Icon(
+              Icons.camera_alt_rounded,
+              color: Colors.grey.shade400,
+              size: 36,
+            ),
           ),
         ],
       ),
@@ -327,10 +369,22 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _QuickAction(icon: Icons.qr_code_scanner_rounded, label: 'Scan',    onTap: onScan),
-      _QuickAction(icon: Icons.explore_outlined,        label: 'Explore',  onTap: () {}),
-      _QuickAction(icon: Icons.storefront_outlined,     label: 'Market',   onTap: () {}),
-      _QuickAction(icon: Icons.history_rounded,         label: 'History',  onTap: () {}),
+      _QuickAction(
+        icon: Icons.qr_code_scanner_rounded,
+        label: 'Scan',
+        onTap: onScan,
+      ),
+      _QuickAction(
+        icon: Icons.explore_outlined,
+        label: 'Explore',
+        onTap: () {},
+      ),
+      _QuickAction(
+        icon: Icons.storefront_outlined,
+        label: 'Market',
+        onTap: () {},
+      ),
+      _QuickAction(icon: Icons.history_rounded, label: 'History', onTap: () {}),
     ];
 
     return Padding(
@@ -388,7 +442,11 @@ class _QuickAction {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -431,7 +489,10 @@ class _SectionHeader extends StatelessWidget {
             ),
             child: Text(
               actionLabel,
-              style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600),
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -475,10 +536,14 @@ class _ScanCard2 extends StatelessWidget {
               height: 110,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 height: 110,
                 color: const Color(0xFF2A3A3A),
-                child: const Icon(Icons.eco_rounded, color: Colors.white54, size: 40),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: Colors.white54,
+                  size: 40,
+                ),
               ),
             ),
           ),
@@ -497,7 +562,10 @@ class _ScanCard2 extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: kGoldBadge.withOpacity(0.18),
                     borderRadius: BorderRadius.circular(20),
@@ -524,7 +592,11 @@ class _ScanItem {
   final String name;
   final int match;
   final String imageAsset;
-  const _ScanItem({required this.name, required this.match, required this.imageAsset});
+  const _ScanItem({
+    required this.name,
+    required this.match,
+    required this.imageAsset,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -565,12 +637,19 @@ class _SellerCard extends StatelessWidget {
                   color: kBrown100,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.eco_rounded, color: kBrown700, size: 22),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: kBrown700,
+                  size: 22,
+                ),
               ),
               const Spacer(),
               if (item.isTop)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: kGoldBadge.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -664,8 +743,20 @@ class _BottomNav extends StatelessWidget {
           height: 64,
           child: Row(
             children: [
-              _NavItem(icon: Icons.home_rounded,      label: 'Home',    index: 0, selected: selectedIndex, onTap: onTap),
-              _NavItem(icon: Icons.explore_outlined,  label: 'Explore', index: 1, selected: selectedIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                index: 0,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.explore_outlined,
+                label: 'Explore',
+                index: 1,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
 
               // Centre FAB
               Expanded(
@@ -688,8 +779,11 @@ class _BottomNav extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.filter_center_focus_rounded,
-                            color: Colors.white, size: 26),
+                        child: const Icon(
+                          Icons.filter_center_focus_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -705,8 +799,20 @@ class _BottomNav extends StatelessWidget {
                 ),
               ),
 
-              _NavItem(icon: Icons.shopping_bag_outlined, label: 'Market',  index: 3, selected: selectedIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, selected: selectedIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.shopping_bag_outlined,
+                label: 'Market',
+                index: 3,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                index: 4,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
             ],
           ),
         ),
