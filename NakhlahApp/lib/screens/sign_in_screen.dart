@@ -72,10 +72,15 @@ class _SignInScreenState extends State<SignInScreen>
     setState(() => _isLoading = true);
 
     try {
-      await _auth.signInWithEmailAndPassword(
+      print('[SignIn] Starting email/password sign-in...');
+      print('[SignIn] Email: ${_emailCtrl.text.trim()}');
+
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
       );
+
+      print('[SignIn] Success: ${userCredential.user?.email}');
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -84,15 +89,15 @@ class _SignInScreenState extends State<SignInScreen>
         );
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint(
-        'FirebaseAuthException — code: ${e.code} | message: ${e.message}',
-      );
+      print('[SignIn ERROR] Code: ${e.code} | Message: ${e.message}');
       if (mounted) {
         setState(() => _errorMsg = _friendlyError(e.code));
       }
-    } catch (e) {
+    } catch (e, st) {
+      print('[SignIn ERROR] $e');
+      print('[SignIn ERROR] StackTrace: $st');
       if (mounted) {
-        setState(() => _errorMsg = 'An unexpected error occurred.');
+        setState(() => _errorMsg = 'Sign-in error: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -402,21 +407,49 @@ class _SignInScreenState extends State<SignInScreen>
                           : () async {
                               setState(() => _isGoogleLoading = true);
                               try {
+                                print(
+                                  '[GoogleSignIn] Starting Google sign-in...',
+                                );
                                 final result =
                                     await AuthService.signInWithGoogle();
+                                print('[GoogleSignIn] Result: $result');
                                 if (result != null && mounted) {
+                                  print(
+                                    '[GoogleSignIn] Success, navigating to HomePage',
+                                  );
                                   Navigator.of(context).pushAndRemoveUntil(
                                     MaterialPageRoute(
                                       builder: (_) => const HomePage(),
                                     ),
                                     (_) => false,
                                   );
+                                } else if (result == null) {
+                                  print(
+                                    '[GoogleSignIn] User cancelled sign-in',
+                                  );
+                                  if (mounted) {
+                                    setState(
+                                      () => _errorMsg = 'Sign-in cancelled.',
+                                    );
+                                  }
                                 }
-                              } catch (e) {
+                              } on FirebaseAuthException catch (e) {
+                                print(
+                                  '[GoogleSignIn ERROR] FirebaseAuthException: ${e.code} - ${e.message}',
+                                );
                                 if (mounted) {
                                   setState(
                                     () => _errorMsg =
-                                        'Google sign-in failed. Please try again.',
+                                        'Google sign-in failed: ${e.message ?? e.code}',
+                                  );
+                                }
+                              } catch (e, st) {
+                                print('[GoogleSignIn ERROR] Exception: $e');
+                                print('[GoogleSignIn ERROR] StackTrace: $st');
+                                if (mounted) {
+                                  setState(
+                                    () =>
+                                        _errorMsg = 'Google sign-in failed: $e',
                                   );
                                 }
                               } finally {

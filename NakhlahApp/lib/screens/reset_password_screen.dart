@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart';
-
-import '../main.dart'; // palette constants
+import 'package:google_fonts/google_fonts.dart'; // palette constants
 
 // ── Design tokens matching sign-up / sign-in ────────────────────────────────
 const Color _kBgCream = Color(0xFFFAF6F1);

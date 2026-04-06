@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart'; // kPalmGreen, kGoldenDate, kOffWhite, kCardWhite, kBorderLight
+import '../main.dart'; // kGoldenDate, kOffWhite, kCardWhite, kBorderLight
 import '../services/auth_service.dart';
 import 'sign_in_screen.dart';
 
@@ -113,7 +113,9 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? Colors.red.shade700 : kPalmGreen,
+        backgroundColor: isError
+            ? Colors.red.shade700
+            : const Color(0xFF5C3A1E),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -137,7 +139,9 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       backgroundColor: kOffWhite,
       // No AppBar — we build a custom header instead
       body: _isFetching
-          ? const Center(child: CircularProgressIndicator(color: kPalmGreen))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF5C3A1E)),
+            )
           : SingleChildScrollView(
               child: Column(
                 children: [
@@ -201,7 +205,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [kPalmGreen, Color(0xFF3D7852)],
+          colors: [Color(0xFF5C3A1E), Color(0xFF6B4423)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -308,7 +312,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kPalmGreen.withValues(alpha: 0.06),
+            color: const Color(0xFF5C3A1E).withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -327,7 +331,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                 style: GoogleFonts.cairo(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: kPalmGreen,
+                  color: const Color(0xFF5C3A1E),
                 ),
               ),
             ],
@@ -423,7 +427,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kPalmGreen.withValues(alpha: 0.06),
+            color: const Color(0xFF5C3A1E).withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -487,7 +491,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           style: GoogleFonts.cairo(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: kPalmGreen,
+            color: const Color(0xFF5C3A1E),
           ),
         ),
       ],
@@ -522,7 +526,7 @@ class _StatCard extends StatelessWidget {
         border: Border.all(color: kBorderLight),
         boxShadow: [
           BoxShadow(
-            color: kPalmGreen.withValues(alpha: 0.05),
+            color: const Color(0xFF5C3A1E).withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -547,7 +551,7 @@ class _StatCard extends StatelessWidget {
             style: GoogleFonts.cairo(
               fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: kPalmGreen,
+              color: const Color(0xFF5C3A1E),
             ),
           ),
           const SizedBox(height: 2),
@@ -585,7 +589,7 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? Colors.red.shade600 : kPalmGreen;
+    final color = isDestructive ? Colors.red.shade600 : const Color(0xFF5C3A1E);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
@@ -596,7 +600,7 @@ class _SettingsTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           color: isDestructive
               ? Colors.red.withValues(alpha: 0.08)
-              : kPalmGreen.withValues(alpha: 0.08),
+              : const Color(0xFF5C3A1E).withValues(alpha: 0.08),
         ),
         child: Icon(icon, color: color, size: 20),
       ),

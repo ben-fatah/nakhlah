@@ -174,7 +174,7 @@ class _OnboardingPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF5C3D1E).withOpacity(0.08),
+                  color: const Color(0xFF5C3D1E).withValues(alpha: 0.08),
                   blurRadius: 30,
                   offset: const Offset(0, 8),
                 ),

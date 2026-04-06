@@ -1,19 +1,15 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../main.dart'; // palette constants
-import '../services/auth_service.dart';
-import 'sign_in_screen.dart';
 import 'manage_profile_screen.dart';
-import 'sign_in_screen.dart';
+import 'scan_screen.dart';
 
-// ─── Colour tokens matching the screenshot ────────────────────────────────────
+//  Colour tokens matching the screenshot
 const Color kBrown900 = Color(0xFF3B1F13); // dark header background
 const Color kBrown700 = Color(0xFF5C3A1E); // buttons, accents
 const Color kBrown100 = Color(0xFFF2EDE8); // page background
 const Color kGoldBadge = Color(0xFFE8B84B); // match badge, TOP badge
-const Color kCardBg   = Color(0xFFEAE4DE); // scan card background
+const Color kCardBg = Color(0xFFEAE4DE); // scan card background
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,49 +21,55 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // ── mock recent scans data ────────────────────────────────────────────────
+  //  mock recent scans data
   final List<_ScanItem> _recentScans = const [
-    _ScanItem(name: 'Ajwa',    match: 98, imageAsset: 'assets/images/ajwa.png'),
-    _ScanItem(name: 'Medjool', match: 92, imageAsset: 'assets/images/medjool.png'),
-    _ScanItem(name: 'Sukari',  match: 85, imageAsset: 'assets/images/sukari.png'),
+    _ScanItem(name: 'Ajwa', match: 98, imageAsset: 'assets/images/ajwa.png'),
+    _ScanItem(
+      name: 'Medjool',
+      match: 92,
+      imageAsset: 'assets/images/medjool.png',
+    ),
+    _ScanItem(
+      name: 'Sukari',
+      match: 85,
+      imageAsset: 'assets/images/sukari.png',
+    ),
   ];
 
   final List<_SellerItem> _sellers = const [
-    _SellerItem(name: 'Al-Madina Farms', rating: 4.9, reviews: '1.2k', isTop: true),
-    _SellerItem(name: 'Royal Oasis',     rating: 4.8, reviews: '850',  isTop: true),
+    _SellerItem(
+      name: 'Al-Madina Farms',
+      rating: 4.9,
+      reviews: '1.2k',
+      isTop: true,
+    ),
+    _SellerItem(name: 'Royal Oasis', rating: 4.8, reviews: '850', isTop: true),
   ];
 
-  // ── sign out ──────────────────────────────────────────────────────────────
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const SignInScreen()),
-        (_) => false,
-      );
-    }
-  }
-
   String get _firstName {
-    final name = FirebaseAuth.instance.currentUser?.displayName
-        ?? FirebaseAuth.instance.currentUser?.email
-        ?? 'User';
+    final name =
+        FirebaseAuth.instance.currentUser?.displayName ??
+        FirebaseAuth.instance.currentUser?.email ??
+        'User';
     return name.split(' ').first.split('@').first;
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final email = user?.email ?? 'No email';
-
     return Scaffold(
       backgroundColor: kBrown100,
       bottomNavigationBar: _BottomNav(
         selectedIndex: _selectedIndex,
         onTap: (i) {
           if (i == 2) {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ScanScreen()));
+            return;
+          }
+          if (i == 4) {
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ScanScreen()),
+              MaterialPageRoute(builder: (_) => const ManageProfileScreen()),
             );
             return;
           }
@@ -80,36 +82,42 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Dark header ───────────────────────────────────────────
+              //  Dark header
               _Header(
                 firstName: _firstName,
                 onNotification: () {},
                 onLanguage: () {},
               ),
 
-              // ── Scan card ─────────────────────────────────────────────
+              //  Scan card
               _ScanCard(
-                onScan: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ScanScreen()),
-                ),
+                onScan: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
               ),
 
               const SizedBox(height: 28),
 
-              // ── Quick actions row ─────────────────────────────────────
+              //  Quick actions row
               _QuickActions(
-                onScan: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ScanScreen()),
-                ),
+                onScan: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
                 onProfile: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ManageProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ManageProfileScreen(),
+                  ),
                 ),
               ),
 
               const SizedBox(height: 28),
 
-              // ── Recent scans ──────────────────────────────────────────
-              _SectionHeader(title: 'Recent Scans', actionLabel: 'View all', onAction: () {}),
+              //  Recent scans
+              _SectionHeader(
+                title: 'Recent Scans',
+                actionLabel: 'View all',
+                onAction: () {},
+              ),
               const SizedBox(height: 14),
               SizedBox(
                 height: 190,
@@ -117,14 +125,19 @@ class _HomePageState extends State<HomePage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: _recentScans.length,
-                  itemBuilder: (context, i) => _ScanCard2(item: _recentScans[i]),
+                  itemBuilder: (context, i) =>
+                      _ScanCard2(item: _recentScans[i]),
                 ),
               ),
 
               const SizedBox(height: 28),
 
-              // ── Featured sellers ──────────────────────────────────────
-              _SectionHeader(title: 'Featured Sellers', actionLabel: 'Explore All', onAction: () {}),
+              //  Featured sellers
+              _SectionHeader(
+                title: 'Featured Sellers',
+                actionLabel: 'Explore All',
+                onAction: () {},
+              ),
               const SizedBox(height: 14),
               SizedBox(
                 height: 140,
@@ -145,9 +158,9 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 //  Header
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 
 class _Header extends StatelessWidget {
   final String firstName;
@@ -173,7 +186,11 @@ class _Header extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.language_rounded, color: Colors.white70, size: 22),
+                icon: const Icon(
+                  Icons.language_rounded,
+                  color: Colors.white70,
+                  size: 22,
+                ),
                 onPressed: onLanguage,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -182,92 +199,80 @@ class _Header extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 24),
+                    icon: const Icon(
+                      Icons.notifications_outlined,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     onPressed: onNotification,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
-                );
-              },
-            ),
-
-            const Divider(indent: 16, endIndent: 16),
-
-            // ── Log Out (red) ───────────────────────────────────────────────
-            _DrawerTile(
-              icon: Icons.logout_rounded,
-              label: 'Log Out',
-              isDestructive: true,
-              onTap: () => _signOut(context),
-            ),
-
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Text(
-                'Nakhlah v1.0',
-                style: GoogleFonts.cairo(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // ── Dashboard Body ────────────────────────────────────────────────────
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Greeting Card ─────────────────────────────────────────────
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [kPalmGreen, Color(0xFF3D7852)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: kPalmGreen.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.eco_rounded,
-                        color: kGoldenDate,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Welcome to Nakhlah!',
-                        style: GoogleFonts.cairo(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+//
+//  Scan Card (Main Card)
+//
+
+class _ScanCard extends StatelessWidget {
+  final VoidCallback onScan;
+
+  const _ScanCard({required this.onScan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: kBrown900.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Scan Dates',
+                  style: GoogleFonts.cairo(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: kBrown900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Identify date varieties in seconds',
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
                   ),
                 ),
                 const SizedBox(height: 16),
                 GestureDetector(
                   onTap: onScan,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: kBrown700,
                       borderRadius: BorderRadius.circular(14),
@@ -275,8 +280,11 @@ class _Header extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.filter_center_focus_rounded,
-                            color: Colors.white, size: 18),
+                        const Icon(
+                          Icons.filter_center_focus_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Scan Now',
@@ -302,8 +310,11 @@ class _Header extends StatelessWidget {
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.camera_alt_rounded,
-                color: Colors.grey.shade400, size: 36),
+            child: Icon(
+              Icons.camera_alt_rounded,
+              color: Colors.grey.shade400,
+              size: 36,
+            ),
           ),
         ],
       ),
@@ -311,9 +322,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  Private Widgets
-// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Quick Actions
+//
 
 class _QuickActions extends StatelessWidget {
   final VoidCallback onScan;
@@ -324,10 +335,22 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      _QuickAction(icon: Icons.qr_code_scanner_rounded, label: 'Scan',    onTap: onScan),
-      _QuickAction(icon: Icons.explore_outlined,        label: 'Explore',  onTap: () {}),
-      _QuickAction(icon: Icons.storefront_outlined,     label: 'Market',   onTap: () {}),
-      _QuickAction(icon: Icons.history_rounded,         label: 'History',  onTap: () {}),
+      _QuickAction(
+        icon: Icons.qr_code_scanner_rounded,
+        label: 'Scan',
+        onTap: onScan,
+      ),
+      _QuickAction(
+        icon: Icons.explore_outlined,
+        label: 'Explore',
+        onTap: () {},
+      ),
+      _QuickAction(
+        icon: Icons.storefront_outlined,
+        label: 'Market',
+        onTap: () {},
+      ),
+      _QuickAction(icon: Icons.history_rounded, label: 'History', onTap: () {}),
     ];
 
     return Padding(
@@ -358,7 +381,7 @@ class _QuickActionTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: kBrown900.withOpacity(0.06),
+                  color: kBrown900.withValues(alpha: 0.06),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -385,23 +408,26 @@ class _QuickAction {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickAction({required this.icon, required this.label, required this.onTap});
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 //  Section Header
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String actionLabel;
   final VoidCallback onAction;
 
-  const _DrawerTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isDestructive = false,
+  const _SectionHeader({
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
   });
 
   @override
@@ -429,7 +455,10 @@ class _SectionHeader extends StatelessWidget {
             ),
             child: Text(
               actionLabel,
-              style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600),
+              style: GoogleFonts.cairo(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -438,9 +467,9 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 //  Recent Scan Card
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 
 class _ScanCard2 extends StatelessWidget {
   final _ScanItem item;
@@ -456,7 +485,7 @@ class _ScanCard2 extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.07),
+            color: kBrown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -476,7 +505,11 @@ class _ScanCard2 extends StatelessWidget {
               errorBuilder: (_, __, ___) => Container(
                 height: 110,
                 color: const Color(0xFF2A3A3A),
-                child: const Icon(Icons.eco_rounded, color: Colors.white54, size: 40),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: Colors.white54,
+                  size: 40,
+                ),
               ),
             ),
           ),
@@ -495,9 +528,12 @@ class _ScanCard2 extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withOpacity(0.18),
+                    color: kGoldBadge.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -522,12 +558,16 @@ class _ScanItem {
   final String name;
   final int match;
   final String imageAsset;
-  const _ScanItem({required this.name, required this.match, required this.imageAsset});
+  const _ScanItem({
+    required this.name,
+    required this.match,
+    required this.imageAsset,
+  });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 //  Seller Card
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 
 class _SellerCard extends StatelessWidget {
   final _SellerItem item;
@@ -544,7 +584,7 @@ class _SellerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.07),
+            color: kBrown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -562,14 +602,21 @@ class _SellerCard extends StatelessWidget {
                   color: kBrown100,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.eco_rounded, color: kBrown700, size: 22),
+                child: const Icon(
+                  Icons.eco_rounded,
+                  color: kBrown700,
+                  size: 22,
+                ),
               ),
               const Spacer(),
               if (item.isTop)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withOpacity(0.15),
+                    color: kGoldBadge.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -632,9 +679,9 @@ class _SellerItem {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 //  Bottom Navigation Bar
-// ═══════════════════════════════════════════════════════════════════════════════
+//
 
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -649,7 +696,7 @@ class _BottomNav extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.08),
+            color: kBrown900.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -661,8 +708,20 @@ class _BottomNav extends StatelessWidget {
           height: 64,
           child: Row(
             children: [
-              _NavItem(icon: Icons.home_rounded,      label: 'Home',    index: 0, selected: selectedIndex, onTap: onTap),
-              _NavItem(icon: Icons.explore_outlined,  label: 'Explore', index: 1, selected: selectedIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                index: 0,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.explore_outlined,
+                label: 'Explore',
+                index: 1,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
 
               // Centre FAB
               Expanded(
@@ -679,14 +738,17 @@ class _BottomNav extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: kBrown900.withOpacity(0.4),
+                              color: kBrown900.withValues(alpha: 0.4),
                               blurRadius: 14,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.filter_center_focus_rounded,
-                            color: Colors.white, size: 26),
+                        child: const Icon(
+                          Icons.filter_center_focus_rounded,
+                          color: Colors.white,
+                          size: 26,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -702,8 +764,20 @@ class _BottomNav extends StatelessWidget {
                 ),
               ),
 
-              _NavItem(icon: Icons.shopping_bag_outlined, label: 'Market',  index: 3, selected: selectedIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4, selected: selectedIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.shopping_bag_outlined,
+                label: 'Market',
+                index: 3,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.person_outline_rounded,
+                label: 'Profile',
+                index: 4,
+                selected: selectedIndex,
+                onTap: onTap,
+              ),
             ],
           ),
         ),

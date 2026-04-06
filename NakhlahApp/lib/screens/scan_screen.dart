@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -9,7 +11,9 @@ class ScanScreen extends StatefulWidget {
 
 class _ScanScreenState extends State<ScanScreen>
     with SingleTickerProviderStateMixin {
+  CameraController? _cameraController;
   bool _flashOn = false;
+  bool _isCameraInitialized = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -23,10 +27,57 @@ class _ScanScreenState extends State<ScanScreen>
     _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      // Request camera permission
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera permission is required')),
+          );
+        }
+        return;
+      }
+
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No cameras available')));
+        }
+        return;
+      }
+
+      _cameraController = CameraController(
+        cameras.first,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await _cameraController!.initialize();
+
+      if (!mounted) return;
+
+      setState(() {
+        _isCameraInitialized = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error initializing camera: $e')),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    _cameraController?.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -107,14 +158,14 @@ class _ScanScreenState extends State<ScanScreen>
                       border: Border.all(
                         color: const Color(
                           0xFFD4A017,
-                        ).withOpacity(_pulseAnimation.value),
+                        ).withValues(alpha: _pulseAnimation.value),
                         width: 3,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: const Color(
                             0xFFD4A017,
-                          ).withOpacity(_pulseAnimation.value * 0.5),
+                          ).withValues(alpha: _pulseAnimation.value * 0.5),
                           blurRadius: 24,
                           spreadRadius: 2,
                         ),
@@ -122,11 +173,18 @@ class _ScanScreenState extends State<ScanScreen>
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        color: Colors.black,
-                        // Replace with CameraPreview widget when camera is wired up:
-                        // child: CameraPreview(controller)
-                      ),
+                      child: _isCameraInitialized && _cameraController != null
+                          ? CameraPreview(_cameraController!)
+                          : Container(
+                              color: Colors.black,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFD4A017),
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   );
                 },
@@ -139,7 +197,7 @@ class _ScanScreenState extends State<ScanScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.white24),
               ),
@@ -188,7 +246,9 @@ class _ScanScreenState extends State<ScanScreen>
                         color: const Color(0xFF5C3A1E),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFD4A017).withOpacity(0.3),
+                            color: const Color(
+                              0xFFD4A017,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 16,
                             spreadRadius: 2,
                           ),
@@ -208,7 +268,27 @@ class _ScanScreenState extends State<ScanScreen>
                       _CircleButton(
                         icon: _flashOn ? Icons.flash_on : Icons.flash_off,
                         size: 52,
-                        onTap: () => setState(() => _flashOn = !_flashOn),
+                        onTap: () async {
+                          if (_cameraController == null) return;
+                          try {
+                            if (_flashOn) {
+                              await _cameraController!.setFlashMode(
+                                FlashMode.off,
+                              );
+                            } else {
+                              await _cameraController!.setFlashMode(
+                                FlashMode.torch,
+                              );
+                            }
+                            setState(() => _flashOn = !_flashOn);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Flash error: $e')),
+                              );
+                            }
+                          }
+                        },
                       ),
                       const SizedBox(height: 6),
                       const Text(
