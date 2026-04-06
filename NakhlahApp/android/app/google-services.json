@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "624405399465-5dihva9ldf9k9j87kp4ju5ct0eijaecp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nakhlah",
+            "certificate_hash": "8c8183b61b46254cc69e7ed1eb03a4dc0f5c0255"
+          }
+        },
+        {
           "client_id": "624405399465-6ndvto70dovdlfo0ic6rls3uaab2ct99.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
