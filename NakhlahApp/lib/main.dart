@@ -97,8 +97,8 @@ class NakhlahApp extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 3,
-                shadowColor: kPalmGreen.withValues(alpha: 0.35),
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                // Use padding to push Cairo text up slightly to counter its bottom alignment
+                padding: const EdgeInsets.only(bottom: 6),
               ),
             ),
             textButtonTheme: TextButtonThemeData(
