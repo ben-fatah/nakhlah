@@ -261,7 +261,6 @@ class _ScanScreenState extends State<ScanScreen>
                                 style: TextStyle(
                                   color: Color(0xFFD4A017),
                                   fontSize: 11,
-                                  letterSpacing: 1.5,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -462,7 +461,6 @@ class _ScanScreenState extends State<ScanScreen>
                         style: const TextStyle(
                           color: Color(0xFFD4A017),
                           fontSize: 11,
-                          letterSpacing: 1.5,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

@@ -169,7 +169,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: _kTitleColor,
-                    letterSpacing: 1.5,
                   ),
                 ),
                 const SizedBox(height: 8),

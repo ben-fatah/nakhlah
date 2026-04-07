@@ -136,7 +136,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
                     ),
                   ),
                 ),

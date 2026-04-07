@@ -91,6 +91,7 @@ class NakhlahApp extends StatelessWidget {
                 textStyle: GoogleFonts.cairo(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

@@ -165,7 +165,6 @@ class DateDetailScreen extends StatelessWidget {
             const Text(
               "NUTRITION PER 100 G",
               style: TextStyle(
-                letterSpacing: 1.2,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
