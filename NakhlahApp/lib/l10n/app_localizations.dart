@@ -85,6 +85,39 @@ class AppLocalizations {
   String get imagePicked => isArabic
       ? 'تم اختيار الصورة. اضغط زر المسح للتحليل.'
       : 'Image selected. Tap scan to analyze.';
+
+  // ── Explore ──────────────────────────────────────────────────────────────
+  String get exploreDates => isArabic ? 'استكشاف التمور' : 'Explore Dates';
+  String get searchHint => isArabic
+      ? 'ابحث عن الصنف أو المنشأ أو النكهة...'
+      : 'Search variety, origin or flavor...';
+  String get allVarieties => isArabic ? 'جميع الأصناف' : 'All Varieties';
+  String get noVarietiesFound =>
+      isArabic ? 'لا توجد أصناف' : 'No varieties found';
+  String get kcalLabel => isArabic ? 'سعرة' : 'kcal';
+
+  // Filter chip labels
+  String get filterAjwa => isArabic ? 'عجوة' : 'Ajwa';
+  String get filterMedjool => isArabic ? 'مجدول' : 'Medjool';
+  String get filterSukkari => isArabic ? 'سكري' : 'Sukkari';
+  String get filterKhalas => isArabic ? 'خلاص' : 'Khalas';
+
+  // Variety names
+  String get ajwaAlMadinah => isArabic ? 'عجوة المدينة' : 'Ajwa Al-Madinah';
+  String get premiumMedjool => isArabic ? 'مجدول فاخر' : 'Premium Medjool';
+  String get sukkariMofatall => isArabic ? 'سكري مفتل' : 'Sukkari Mofatall';
+  String get khalasAlAhsa => isArabic ? 'خلاص الأحساء' : 'Khalas Al-Ahsa';
+  String get barhiGolden => isArabic ? 'برحي ذهبي' : 'Barhi Golden';
+  String get sagaiDates => isArabic ? 'تمر صقعي' : 'Sagai Dates';
+
+  // Variety origins
+  String get originMadinah =>
+      isArabic ? 'المدينة المنورة، السعودية' : 'Madinah, KSA';
+  String get originJericho => isArabic ? 'أريحا، فلسطين' : 'Jericho, Palestine';
+  String get originQassim =>
+      isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
+  String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
+  String get originRiyadh => isArabic ? 'الرياض، السعودية' : 'Riyadh, KSA';
 }
 
 class _AppLocalizationsDelegate

@@ -15,16 +15,16 @@ const Color _kChipActive = Color(0xFF3B1F13);
 
 // ── Data model ───────────────────────────────────────────────────────────────
 class _DateVariety {
-  final String name;
-  final String origin;
+  final String Function(AppLocalizations l) nameGetter;
+  final String Function(AppLocalizations l) originGetter;
   final int kcal;
   final double price;
   final String imagePath;
   final String tag; // matches filter chip key
 
   const _DateVariety({
-    required this.name,
-    required this.origin,
+    required this.nameGetter,
+    required this.originGetter,
     required this.kcal,
     required this.price,
     required this.imagePath,
@@ -32,50 +32,50 @@ class _DateVariety {
   });
 }
 
-const List<_DateVariety> _allVarieties = [
+final List<_DateVariety> _allVarieties = [
   _DateVariety(
-    name: 'Ajwa Al-Madinah',
-    origin: 'Madinah, KSA',
+    nameGetter: (l) => l.ajwaAlMadinah,
+    originGetter: (l) => l.originMadinah,
     kcal: 280,
     price: 24.00,
     imagePath: 'assets/images/ajwa.png',
     tag: 'ajwa',
   ),
   _DateVariety(
-    name: 'Premium Medjool',
-    origin: 'Jericho, Palestine',
+    nameGetter: (l) => l.premiumMedjool,
+    originGetter: (l) => l.originJericho,
     kcal: 277,
     price: 18.50,
     imagePath: 'assets/images/medjool.png',
     tag: 'medjool',
   ),
   _DateVariety(
-    name: 'Sukkari Mofatall',
-    origin: 'Al-Qassim, KSA',
+    nameGetter: (l) => l.sukkariMofatall,
+    originGetter: (l) => l.originQassim,
     kcal: 320,
     price: 15.00,
     imagePath: 'assets/images/sukari.png',
     tag: 'sukkari',
   ),
   _DateVariety(
-    name: 'Khalas Al-Ahsa',
-    origin: 'Al-Ahsa, KSA',
+    nameGetter: (l) => l.khalasAlAhsa,
+    originGetter: (l) => l.originAhsa,
     kcal: 300,
     price: 12.90,
     imagePath: 'assets/images/khalas.png',
     tag: 'khalas',
   ),
   _DateVariety(
-    name: 'Barhi Golden',
-    origin: 'Al-Qassim, KSA',
+    nameGetter: (l) => l.barhiGolden,
+    originGetter: (l) => l.originQassim,
     kcal: 265,
     price: 20.00,
     imagePath: 'assets/images/barhi.png',
     tag: 'barhi',
   ),
   _DateVariety(
-    name: 'Sagai Dates',
-    origin: 'Riyadh, KSA',
+    nameGetter: (l) => l.sagaiDates,
+    originGetter: (l) => l.originRiyadh,
     kcal: 290,
     price: 14.50,
     imagePath: 'assets/images/sagai.png',
@@ -99,21 +99,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   final _searchCtrl = TextEditingController();
 
-  final List<Map<String, String>> _filters = const [
-    {'key': 'all', 'label': 'All Varieties'},
-    {'key': 'ajwa', 'label': 'Ajwa'},
-    {'key': 'medjool', 'label': 'Medjool'},
-    {'key': 'sukkari', 'label': 'Sukkari'},
-    {'key': 'khalas', 'label': 'Khalas'},
+  List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
+    {'key': 'all', 'label': l.allVarieties},
+    {'key': 'ajwa', 'label': l.filterAjwa},
+    {'key': 'medjool', 'label': l.filterMedjool},
+    {'key': 'sukkari', 'label': l.filterSukkari},
+    {'key': 'khalas', 'label': l.filterKhalas},
   ];
 
-  List<_DateVariety> get _filtered {
+  List<_DateVariety> _filtered(AppLocalizations l) {
     return _allVarieties.where((v) {
       final matchFilter = _selectedFilter == 'all' || v.tag == _selectedFilter;
       final matchSearch =
           _searchQuery.isEmpty ||
-          v.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          v.origin.toLowerCase().contains(_searchQuery.toLowerCase());
+          v.nameGetter(l).toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          v.originGetter(l).toLowerCase().contains(_searchQuery.toLowerCase());
       return matchFilter && matchSearch;
     }).toList();
   }
@@ -126,6 +126,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: _kBg,
       bottomNavigationBar: _buildBottomNav(),
@@ -134,10 +135,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            _buildSearchBar(),
-            _buildFilterChips(),
-            Expanded(child: _buildGrid()),
+            _buildHeader(l),
+            _buildSearchBar(l),
+            _buildFilterChips(l),
+            Expanded(child: _buildGrid(l)),
           ],
         ),
       ),
@@ -145,14 +146,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Explore Dates',
+            l.exploreDates,
             style: GoogleFonts.cairo(
               fontSize: 26,
               fontWeight: FontWeight.w800,
@@ -180,7 +181,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   // ── Search Bar ─────────────────────────────────────────────────────────────
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Container(
@@ -193,7 +194,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           onChanged: (v) => setState(() => _searchQuery = v),
           style: GoogleFonts.cairo(fontSize: 14, color: _kBrown),
           decoration: InputDecoration(
-            hintText: 'Search variety, origin or flavor...',
+            hintText: l.searchHint,
             hintStyle: GoogleFonts.cairo(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -218,15 +219,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   // ── Filter Chips ───────────────────────────────────────────────────────────
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(AppLocalizations l) {
+    final filters = _getFilters(l);
     return SizedBox(
       height: 48,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _filters.length,
+        itemCount: filters.length,
         itemBuilder: (context, i) {
-          final f = _filters[i];
+          final f = filters[i];
           final isActive = _selectedFilter == f['key'];
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f['key']!),
@@ -257,12 +259,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   // ── Grid ───────────────────────────────────────────────────────────────────
-  Widget _buildGrid() {
-    final items = _filtered;
+  Widget _buildGrid(AppLocalizations l) {
+    final items = _filtered(l);
     if (items.isEmpty) {
       return Center(
         child: Text(
-          'No varieties found',
+          l.noVarietiesFound,
           style: GoogleFonts.cairo(color: Colors.grey.shade500, fontSize: 15),
         ),
       );
@@ -277,7 +279,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       ),
       itemCount: items.length,
       itemBuilder: (context, i) =>
-          _isGrid ? _GridCard(variety: items[i]) : _ListCard(variety: items[i]),
+          _isGrid ? _GridCard(variety: items[i], l: l) : _ListCard(variety: items[i], l: l),
     );
   }
 
@@ -404,7 +406,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 // ── Grid Card ─────────────────────────────────────────────────────────────────
 class _GridCard extends StatelessWidget {
   final _DateVariety variety;
-  const _GridCard({required this.variety});
+  final AppLocalizations l;
+  const _GridCard({required this.variety, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +458,7 @@ class _GridCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    variety.name,
+                    variety.nameGetter(l),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.cairo(
@@ -474,7 +477,7 @@ class _GridCard extends StatelessWidget {
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
-                          variety.origin,
+                          variety.originGetter(l),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.cairo(
@@ -498,7 +501,7 @@ class _GridCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${variety.kcal} kcal',
+                          '${variety.kcal} ${l.kcalLabel}',
                           style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -529,7 +532,8 @@ class _GridCard extends StatelessWidget {
 // ── List Card ─────────────────────────────────────────────────────────────────
 class _ListCard extends StatelessWidget {
   final _DateVariety variety;
-  const _ListCard({required this.variety});
+  final AppLocalizations l;
+  const _ListCard({required this.variety, required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -575,7 +579,7 @@ class _ListCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    variety.name,
+                    variety.nameGetter(l),
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
@@ -592,7 +596,7 @@ class _ListCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 2),
                       Text(
-                        variety.origin,
+                        variety.originGetter(l),
                         style: GoogleFonts.cairo(
                           fontSize: 12,
                           color: Colors.grey.shade500,
@@ -614,7 +618,7 @@ class _ListCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '${variety.kcal} kcal',
+                          '${variety.kcal} ${l.kcalLabel}',
                           style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

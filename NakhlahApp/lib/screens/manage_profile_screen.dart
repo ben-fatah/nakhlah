@@ -568,7 +568,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           const SizedBox(height: 24),
           SizedBox(
             height: 52,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: _isLoading ? null : _saveChanges,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF5C3A1E),
@@ -577,17 +577,23 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                   0xFF5C3A1E,
                 ).withValues(alpha: 0.4),
               ),
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2.5,
-                      ),
-                    )
-                  : const Icon(Icons.check_circle_outline_rounded, size: 20),
-              label: Text(_isLoading ? l.saving : l.saveUpdates),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(_isLoading ? l.saving : l.saveUpdates),
+                  const SizedBox(width: 8),
+                  _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Icon(Icons.check_circle_outline_rounded, size: 20),
+                ],
+              ),
             ),
           ),
         ],

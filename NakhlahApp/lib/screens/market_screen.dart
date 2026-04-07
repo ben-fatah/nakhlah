@@ -5,16 +5,8 @@ import 'scan_screen.dart';
 import 'explore_screen.dart';
 import 'manage_profile_screen.dart';
 
-// Simple localization helper
-class AppLocalizations {
-  static AppLocalizations of(BuildContext context) => AppLocalizations();
-
-  String get home => 'الرئيسية';
-  String get explore => 'استكشاف';
-  String get scan => 'مسح';
-  String get market => 'السوق';
-  String get profile => 'الملف الشخصي';
-}
+import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
 
 const Color _kBg = Color(0xFFF5F0EB);
 const Color _kBrown = Color(0xFF3B1F13);
@@ -26,84 +18,84 @@ const Color _kGreen = Color(0xFF2E7D32);
 
 // ── Data models ──────────────────────────────────────────────────────────────
 class _Product {
-  final String name;
+  final String Function(AppLocalizations l) nameGetter;
   final double rating;
   final int reviews;
   final double price;
-  final String unit;
+  final String Function(AppLocalizations l) unitGetter;
   final String imagePath;
   final String tag;
   final bool isVerified;
 
   const _Product({
-    required this.name,
+    required this.nameGetter,
     required this.rating,
     required this.reviews,
     required this.price,
-    required this.unit,
+    required this.unitGetter,
     required this.imagePath,
     required this.tag,
     required this.isVerified,
   });
 }
 
-const List<_Product> _allProducts = [
+final List<_Product> _allProducts = [
   _Product(
-    name: 'مجدول ملكي فاخر',
+    nameGetter: (l) => l.premiumMedjool,
     rating: 4.8,
     reviews: 85,
     price: 110,
-    unit: 'لكل كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
     imagePath: 'assets/images/medjool.png',
     tag: 'medjool',
     isVerified: true,
   ),
   _Product(
-    name: 'عجوة المدينة المنورة',
+    nameGetter: (l) => l.ajwaAlMadinah,
     rating: 4.9,
     reviews: 120,
     price: 85,
-    unit: 'لكل كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
     imagePath: 'assets/images/ajwa.png',
     tag: 'ajwa',
     isVerified: true,
   ),
   _Product(
-    name: 'خلاص القصيم كرتون',
+    nameGetter: (l) => l.khalasAlAhsa,
     rating: 4.5,
     reviews: 67,
     price: 130,
-    unit: 'لكل ٣ كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل ٣ كغ' : 'per 3 kg',
     imagePath: 'assets/images/khalas.png',
     tag: 'khalas',
     isVerified: false,
   ),
   _Product(
-    name: 'سكري مفتل درجة أولى',
+    nameGetter: (l) => l.sukkariMofatall,
     rating: 4.7,
     reviews: 42,
     price: 45,
-    unit: 'لكل كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
     imagePath: 'assets/images/sukari.png',
     tag: 'sukkari',
     isVerified: true,
   ),
   _Product(
-    name: 'برحي ذهبي طازج',
+    nameGetter: (l) => l.barhiGolden,
     rating: 4.6,
     reviews: 33,
     price: 60,
-    unit: 'لكل كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
     imagePath: 'assets/images/barhi.png',
     tag: 'barhi',
     isVerified: false,
   ),
   _Product(
-    name: 'صقعي ممتاز',
+    nameGetter: (l) => l.sagaiDates,
     rating: 4.4,
     reviews: 28,
     price: 55,
-    unit: 'لكل كغ',
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
     imagePath: 'assets/images/sagai.png',
     tag: 'sagai',
     isVerified: false,
@@ -125,20 +117,20 @@ class _MarketScreenState extends State<MarketScreen> {
   final Set<int> _cart = {};
   final _searchCtrl = TextEditingController();
 
-  final List<Map<String, String>> _filters = const [
-    {'key': 'all', 'label': 'الكل'},
-    {'key': 'medjool', 'label': 'مجدول'},
-    {'key': 'ajwa', 'label': 'عجوة'},
-    {'key': 'sukkari', 'label': 'سكري'},
-    {'key': 'khalas', 'label': 'خلاص'},
+  List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
+    {'key': 'all', 'label': l.allVarieties},
+    {'key': 'medjool', 'label': l.filterMedjool},
+    {'key': 'ajwa', 'label': l.filterAjwa},
+    {'key': 'sukkari', 'label': l.filterSukkari},
+    {'key': 'khalas', 'label': l.filterKhalas},
   ];
 
-  List<_Product> get _filtered {
+  List<_Product> _filtered(AppLocalizations l) {
     return _allProducts.where((p) {
       final matchFilter = _selectedFilter == 'all' || p.tag == _selectedFilter;
       final matchSearch =
           _searchQuery.isEmpty ||
-          p.name.toLowerCase().contains(_searchQuery.toLowerCase());
+          p.nameGetter(l).toLowerCase().contains(_searchQuery.toLowerCase());
       return matchFilter && matchSearch;
     }).toList();
   }
@@ -151,28 +143,30 @@ class _MarketScreenState extends State<MarketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final isAr = localeProvider.isArabic;
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: _kBg,
-        bottomNavigationBar: _buildBottomNav(),
+        bottomNavigationBar: _buildBottomNav(l),
         body: SafeArea(
           bottom: true,
           child: Column(
             children: [
-              _buildHeader(),
-              _buildSearchBar(),
-              _buildFilterChips(),
+              _buildHeader(l),
+              _buildSearchBar(l, isAr),
+              _buildFilterChips(l),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeroBanner(),
+                      _buildHeroBanner(l),
                       const SizedBox(height: 24),
-                      _buildSectionHeader(),
+                      _buildSectionHeader(l),
                       const SizedBox(height: 14),
-                      _buildProductGrid(),
+                      _buildProductGrid(l),
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -186,7 +180,7 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
@@ -209,7 +203,7 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           ),
           Text(
-            'سوق نخلة',
+            l.market,
             style: GoogleFonts.cairo(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -234,7 +228,7 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Search Bar ─────────────────────────────────────────────────────────────
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations l, bool isAr) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: Container(
@@ -244,11 +238,11 @@ class _MarketScreenState extends State<MarketScreen> {
         ),
         child: TextField(
           controller: _searchCtrl,
-          textDirection: TextDirection.rtl,
+          textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           onChanged: (v) => setState(() => _searchQuery = v),
           style: GoogleFonts.cairo(fontSize: 14, color: _kBrown),
           decoration: InputDecoration(
-            hintText: 'ابحث عن أنواع التمور...',
+            hintText: l.searchHint,
             hintStyle: GoogleFonts.cairo(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -273,21 +267,24 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Filter Chips ───────────────────────────────────────────────────────────
-  Widget _buildFilterChips() {
+  Widget _buildFilterChips(AppLocalizations l) {
+    final filters = _getFilters(l);
     return SizedBox(
       height: 48,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _filters.length,
+        itemCount: filters.length,
         itemBuilder: (context, i) {
-          final f = _filters[i];
+          final f = filters[i];
           final isActive = _selectedFilter == f['key'];
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = f['key']!),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(left: 10),
+              margin: EdgeInsets.only(
+                  left: localeProvider.isArabic ? 10 : 0, 
+                  right: localeProvider.isArabic ? 0 : 10),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 color: isActive ? _kChipActive : Colors.white,
@@ -312,7 +309,7 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Hero Banner ────────────────────────────────────────────────────────────
-  Widget _buildHeroBanner() {
+  Widget _buildHeroBanner(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
@@ -347,10 +344,10 @@ class _MarketScreenState extends State<MarketScreen> {
             // Text overlay
             Positioned(
               bottom: 20,
-              right: 20,
-              left: 20,
+              right: localeProvider.isArabic ? 20 : null,
+              left: localeProvider.isArabic ? null : 20,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: localeProvider.isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -362,7 +359,7 @@ class _MarketScreenState extends State<MarketScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'عرض خاص',
+                      l.isArabic ? 'عرض خاص' : 'Special Offer',
                       style: GoogleFonts.cairo(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -372,7 +369,7 @@ class _MarketScreenState extends State<MarketScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'سكري فاخر',
+                    l.sukkariMofatall,
                     style: GoogleFonts.cairo(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
@@ -380,7 +377,7 @@ class _MarketScreenState extends State<MarketScreen> {
                     ),
                   ),
                   Text(
-                    'قطاف الموسم الجديد من مزارع القصيم',
+                    l.isArabic ? 'قطاف الموسم الجديد من مزارع القصيم' : 'New season harvest from Qassim',
                     style: GoogleFonts.cairo(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.85),
@@ -396,12 +393,20 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Section Header ─────────────────────────────────────────────────────────
-  Widget _buildSectionHeader() {
+  Widget _buildSectionHeader(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Text(
+            l.isArabic ? 'أحدث المنتجات' : 'Newest Products',
+            style: GoogleFonts.cairo(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: _kBrown,
+            ),
+          ),
           TextButton(
             onPressed: () {},
             style: TextButton.styleFrom(
@@ -411,19 +416,11 @@ class _MarketScreenState extends State<MarketScreen> {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              'عرض الكل',
+              l.isArabic ? 'عرض الكل' : 'View All',
               style: GoogleFonts.cairo(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
-            ),
-          ),
-          Text(
-            'أحدث المنتجات',
-            style: GoogleFonts.cairo(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: _kBrown,
             ),
           ),
         ],
@@ -432,8 +429,8 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Product Grid ───────────────────────────────────────────────────────────
-  Widget _buildProductGrid() {
-    final products = _filtered;
+  Widget _buildProductGrid(AppLocalizations l) {
+    final products = _filtered(l);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.builder(
@@ -448,6 +445,7 @@ class _MarketScreenState extends State<MarketScreen> {
         itemCount: products.length,
         itemBuilder: (context, i) => _ProductCard(
           product: products[i],
+          l: l,
           inCart: _cart.contains(i),
           onAddToCart: () => setState(() {
             if (_cart.contains(i)) {
@@ -457,7 +455,7 @@ class _MarketScreenState extends State<MarketScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'تمت الإضافة إلى السلة',
+                    l.isArabic ? 'تمت الإضافة إلى السلة' : 'Added to cart',
                     style: GoogleFonts.cairo(),
                   ),
                   backgroundColor: _kBrown700,
@@ -477,8 +475,7 @@ class _MarketScreenState extends State<MarketScreen> {
   }
 
   // ── Bottom Nav ─────────────────────────────────────────────────────────────
-  Widget _buildBottomNav() {
-    final l = AppLocalizations.of(context);
+  Widget _buildBottomNav(AppLocalizations l) {
     final items = [
       {'icon': Icons.home_rounded, 'label': l.home},
       {'icon': Icons.explore_outlined, 'label': l.explore},
@@ -488,7 +485,7 @@ class _MarketScreenState extends State<MarketScreen> {
     ];
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: localeProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -602,11 +599,13 @@ class _MarketScreenState extends State<MarketScreen> {
 // ── Product Card ──────────────────────────────────────────────────────────────
 class _ProductCard extends StatelessWidget {
   final _Product product;
+  final AppLocalizations l;
   final bool inCart;
   final VoidCallback onAddToCart;
 
   const _ProductCard({
     required this.product,
+    required this.l,
     required this.inCart,
     required this.onAddToCart,
   });
@@ -676,7 +675,7 @@ class _ProductCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            'بائع موثوق',
+                            l.isArabic ? 'بائع موثوق' : 'Verified',
                             style: GoogleFonts.cairo(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -724,10 +723,10 @@ class _ProductCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    product.name,
+                    product.nameGetter(l),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
+                    textAlign: localeProvider.isArabic ? TextAlign.right : TextAlign.left,
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -736,10 +735,10 @@ class _ProductCard extends StatelessWidget {
                   ),
                   // Rating
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: localeProvider.isArabic ? MainAxisAlignment.end : MainAxisAlignment.start,
                     children: [
                       Text(
-                        '(${product.reviews} تقييم)',
+                        l.isArabic ? '(${product.reviews} تقييم)' : '(${product.reviews} reviews)',
                         style: GoogleFonts.cairo(
                           fontSize: 10,
                           color: Colors.grey.shade500,
@@ -785,7 +784,9 @@ class _ProductCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            'ر.س ${product.price.toStringAsFixed(0)}',
+                            l.isArabic 
+                              ? 'ر.س ${product.price.toStringAsFixed(0)}'
+                              : 'SAR ${product.price.toStringAsFixed(0)}',
                             style: GoogleFonts.cairo(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -793,7 +794,7 @@ class _ProductCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            product.unit,
+                            product.unitGetter(l),
                             style: GoogleFonts.cairo(
                               fontSize: 10,
                               color: Colors.grey.shade500,
