@@ -9,6 +9,10 @@ import 'market_screen.dart' as market;
 import '../providers/locale_provider.dart';
 import '../l10n/app_localizations.dart';
 
+// ── IndexedStack tab indices ──────────────────────────────────────────────────
+// 0 = Home, 1 = Explore, 2 = Market, 3 = Profile
+// Scan is NOT in the stack — it is pushed as a modal route to isolate camera lifecycle.
+
 const Color kBrown900 = Color(0xFF3B1F13);
 const Color kBrown700 = Color(0xFF5C3A1E);
 const Color kBrown100 = Color(0xFFF2EDE8);
@@ -23,7 +27,72 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // ── IndexedStack index mapping ─────────────────────────────────────────────
+  // 0=Home, 1=Explore, 2=Market, 3=Profile
+  // Scan is index 2 in the nav bar but is NOT in the stack — pushed as a modal.
   int _selectedIndex = 0;
+
+  // Map nav-bar index → stack index (skip slot 2 which is the Scan FAB)
+  static const Map<int, int> _navToStackIndex = {
+    0: 0, // Home
+    1: 1, // Explore
+    3: 2, // Market
+    4: 3, // Profile
+  };
+
+  // Persistent screen instances — created once, kept alive by IndexedStack
+  final List<Widget> _stackScreens = const [
+    _HomeContent(), // index 0
+    ExploreScreen(), // index 1
+    market.MarketScreen(), // index 2
+    ManageProfileScreen(), // index 3
+  ];
+
+  void _onNavTap(int navIndex) {
+    // Scan tab (nav index 2) → push as modal to isolate camera lifecycle
+    if (navIndex == 2) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const ScanScreen()));
+      return;
+    }
+    final stackIdx = _navToStackIndex[navIndex];
+    if (stackIdx != null) setState(() => _selectedIndex = navIndex);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    // Resolve the stack child index from the current nav selection
+    final stackIndex = _navToStackIndex[_selectedIndex] ?? 0;
+
+    return Scaffold(
+      backgroundColor: kBrown100,
+      bottomNavigationBar: _BottomNav(
+        selectedIndex: _selectedIndex,
+        homeLabel: l10n.home,
+        exploreLabel: l10n.explore,
+        marketLabel: l10n.market,
+        profileLabel: l10n.profile,
+        onTap: _onNavTap,
+      ),
+      // IndexedStack keeps all screens alive — state (scroll, data) is preserved
+      body: IndexedStack(index: stackIndex, children: _stackScreens),
+    );
+  }
+}
+
+// ── Home Tab Content (extracted so it can live inside IndexedStack) ────────────
+class _HomeContent extends StatefulWidget {
+  const _HomeContent();
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
 
   final List<_ScanItem> _recentScans = const [
     _ScanItem(name: 'Ajwa', match: 98, imageAsset: 'assets/images/ajwa.png'),
@@ -61,7 +130,6 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Try displayName first
     if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
       if (mounted) {
         setState(() => _firstName = user.displayName!.split(' ').first);
@@ -69,7 +137,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // Fallback: read fullName from Firestore
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
@@ -77,13 +144,9 @@ class _HomePageState extends State<HomePage> {
           .get();
       final fullName = doc.data()?['fullName'] as String? ?? '';
       if (fullName.isNotEmpty) {
-        // Also update the Auth profile so next time it's instant
         await user.updateDisplayName(fullName);
-        if (mounted) {
-          setState(() => _firstName = fullName.split(' ').first);
-        }
+        if (mounted) setState(() => _firstName = fullName.split(' ').first);
       } else {
-        // Last resort: use email prefix
         if (mounted) {
           setState(() => _firstName = (user.email ?? 'User').split('@').first);
         }
@@ -97,109 +160,66 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: kBrown100,
-      bottomNavigationBar: _BottomNav(
-        selectedIndex: _selectedIndex,
-        homeLabel: l10n.home,
-        exploreLabel: l10n.explore,
-        marketLabel: l10n.market,
-        profileLabel: l10n.profile,
-        onTap: (i) {
-          if (i == 1) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ExploreScreen()));
-            return;
-          }
-          if (i == 2) {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const ScanScreen()));
-            return;
-          }
-          if (i == 3) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const market.MarketScreen()),
-            );
-            return;
-          }
-          if (i == 4) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ManageProfileScreen()),
-            );
-            return;
-          }
-          setState(() => _selectedIndex = i);
-        },
-      ),
-      body: SafeArea(
-        bottom: true,
-        child: SingleChildScrollView(
-          child: Builder(
-            builder: (context) {
-              final l = AppLocalizations.of(context);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Header(
-                    firstName: _firstName,
-                    onNotification: () {},
-                    onLanguage: () => localeProvider.toggleLocale(),
-                  ),
-                  _ScanCard(
-                    label: l.scanDates,
-                    subtitle: l.identifyInSeconds,
-                    buttonLabel: l.scanNow,
-                    onScan: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ScanScreen()),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  const SizedBox(height: 28),
-                  _SectionHeader(
-                    title: l.recentScans,
-                    actionLabel: l.viewAll,
-                    onAction: () {},
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: 190,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _recentScans.length,
-                      itemBuilder: (context, i) =>
-                          _ScanCard2(item: _recentScans[i]),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  _SectionHeader(
-                    title: l.featuredSellers,
-                    actionLabel: l.exploreAll,
-                    onAction: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const market.MarketScreen(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: 140,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _sellers.length,
-                      itemBuilder: (context, i) =>
-                          _SellerCard(item: _sellers[i]),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              );
-            },
-          ),
+    super.build(context); // required by AutomaticKeepAliveClientMixin
+    final l = AppLocalizations.of(context);
+    return SafeArea(
+      top: false,    // header handles its own top padding via MediaQuery
+      bottom: false, // bottom handled by Scaffold's BottomNavigationBar
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(
+              firstName: _firstName,
+              l: l,
+              onNotification: () {},
+              onLanguage: () => localeProvider.toggleLocale(),
+            ),
+            const SizedBox(height: 20),
+            _ScanCard(
+              label: l.scanDates,
+              subtitle: l.identifyInSeconds,
+              buttonLabel: l.scanNow,
+              onScan: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ScanScreen())),
+            ),
+            const SizedBox(height: 28),
+            _SectionHeader(
+              title: l.recentScans,
+              actionLabel: l.viewAll,
+              onAction: () {},
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 190,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _recentScans.length,
+                itemBuilder: (context, i) => _ScanCard2(item: _recentScans[i]),
+              ),
+            ),
+            const SizedBox(height: 28),
+            _SectionHeader(
+              title: l.featuredSellers,
+              actionLabel: l.exploreAll,
+              onAction: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const market.MarketScreen()),
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: _sellers.length,
+                itemBuilder: (context, i) => _SellerCard(item: _sellers[i]),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );
@@ -209,36 +229,71 @@ class _HomePageState extends State<HomePage> {
 // ── Header ────────────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
   final String firstName;
+  final AppLocalizations l;
   final VoidCallback onNotification;
   final VoidCallback onLanguage;
 
   const _Header({
     required this.firstName,
+    required this.l,
     required this.onNotification,
     required this.onLanguage,
   });
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
     return Container(
-      color: kBrown900,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF3B1F13), Color(0xFF5C3A1E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, topPad + 12, 20, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Top row: language toggle + notification ────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.language_rounded,
-                  color: Colors.white70,
-                  size: 22,
+              // Language toggle
+              GestureDetector(
+                onTap: onLanguage,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.language_rounded,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        l.isArabic ? 'EN' : 'ع',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                onPressed: onLanguage,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
               ),
+              // Notification bell
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -246,15 +301,15 @@ class _Header extends StatelessWidget {
                     icon: const Icon(
                       Icons.notifications_outlined,
                       color: Colors.white,
-                      size: 24,
+                      size: 26,
                     ),
                     onPressed: onNotification,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                   Positioned(
-                    top: 0,
-                    right: 0,
+                    top: -1,
+                    right: -1,
                     child: Container(
                       width: 9,
                       height: 9,
@@ -268,18 +323,36 @@ class _Header extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 18),
+          // ── Greeting row ──────────────────────────────────────────────
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                'Marhaba, $firstName ',
-                style: GoogleFonts.cairo(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${l.greeting}, $firstName 👋',
+                      style: GoogleFonts.cairo(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l.identifyInSeconds,
+                      style: GoogleFonts.cairo(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Text('👋', style: TextStyle(fontSize: 24)),
             ],
           ),
         ],

@@ -1,4 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ── Camera (live scan) ─────────────────────────────────────────────── -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+
+    <!-- ── Gallery / Media (image picker) ───────────────────────────────────
+         READ_MEDIA_IMAGES  → Android 13+ (API 33+)
+         READ_EXTERNAL_STORAGE → Android ≤12 (maxSdkVersion keeps it off on 13+)
+         WRITE_EXTERNAL_STORAGE → Camera capture temp files on Android ≤9 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
+
+    <!-- ── Internet (Firebase, image upload/download) ───────────────────── -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="nakhlah"
         android:name="${applicationName}"

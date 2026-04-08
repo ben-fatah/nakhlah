@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'scan_screen.dart';
-import 'explore_screen.dart';
-import 'manage_profile_screen.dart';
-
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 
@@ -113,7 +109,6 @@ class MarketScreen extends StatefulWidget {
 class _MarketScreenState extends State<MarketScreen> {
   String _selectedFilter = 'all';
   String _searchQuery = '';
-  int _navIndex = 3;
   final Set<int> _cart = {};
   final _searchCtrl = TextEditingController();
 
@@ -149,9 +144,8 @@ class _MarketScreenState extends State<MarketScreen> {
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: _kBg,
-        bottomNavigationBar: _buildBottomNav(l),
         body: SafeArea(
-          bottom: true,
+          bottom: false,
           child: Column(
             children: [
               _buildHeader(l),
@@ -474,126 +468,6 @@ class _MarketScreenState extends State<MarketScreen> {
     );
   }
 
-  // ── Bottom Nav ─────────────────────────────────────────────────────────────
-  Widget _buildBottomNav(AppLocalizations l) {
-    final items = [
-      {'icon': Icons.home_rounded, 'label': l.home},
-      {'icon': Icons.explore_outlined, 'label': l.explore},
-      {'icon': Icons.filter_center_focus_rounded, 'label': l.scan},
-      {'icon': Icons.shopping_bag_outlined, 'label': l.market},
-      {'icon': Icons.person_outline_rounded, 'label': l.profile},
-    ];
-
-    return Directionality(
-      textDirection: localeProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: _kBrown.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 64,
-            child: Row(
-              children: List.generate(items.length, (i) {
-                final isCenter = i == 2;
-                final isSelected = i == _navIndex;
-                final color = isSelected ? _kBrown700 : Colors.grey.shade400;
-
-                if (isCenter) {
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ScanScreen()),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: _kBrown,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _kBrown.withValues(alpha: 0.35),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.filter_center_focus_rounded,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                return Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      if (i == 0) {
-                        Navigator.of(context).pop();
-                      } else if (i == 1) {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const ExploreScreen(),
-                          ),
-                        );
-                      } else if (i == 4) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ManageProfileScreen(),
-                          ),
-                        );
-                      } else {
-                        setState(() => _navIndex = i);
-                      }
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          items[i]['icon'] as IconData,
-                          color: color,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          items[i]['label'] as String,
-                          style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            fontWeight: isSelected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ── Product Card ──────────────────────────────────────────────────────────────

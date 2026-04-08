@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../main.dart';
 import '../l10n/app_localizations.dart';
@@ -27,10 +23,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 
   bool _isLoading = false;
   bool _isFetching = true;
-  bool _isUploadingPhoto = false;
-  File? _pickedPhoto;
   String? _photoUrl;
-  final _picker = ImagePicker();
 
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
@@ -70,152 +63,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     } finally {
       if (mounted) setState(() => _isFetching = false);
     }
-  }
-
-  // ── Photo Picker ────────────────────────────────────────────────────────
-  // We call image_picker DIRECTLY — it triggers the native OS permission
-  // dialog on its own, exactly like WhatsApp, Instagram, etc.
-  // We only call openAppSettings() if the user already permanently denied.
-  Future<void> _pickAndUploadPhoto() async {
-    // Check current status WITHOUT requesting — so we don't pre-block
-    final currentStatus = await Permission.photos.status;
-    final storageStatus = await Permission.storage.status;
-
-    // If already permanently denied → send user to Settings
-    if (currentStatus.isPermanentlyDenied &&
-        storageStatus.isPermanentlyDenied) {
-      if (mounted) _showSettingsDialog();
-      return;
-    }
-
-    // Otherwise just open the picker — the OS will show the permission
-    // dialog automatically on first use (Android & iOS both handle this)
-    try {
-      final XFile? picked = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 512,
-      );
-
-      if (picked == null) return; // user cancelled
-
-      final file = File(picked.path);
-      setState(() {
-        _pickedPhoto = file;
-        _isUploadingPhoto = true;
-      });
-
-      await _uploadPhoto(file);
-    } catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('permission') ||
-          msg.contains('denied') ||
-          msg.contains('access')) {
-        if (mounted) _showSettingsDialog();
-      } else {
-        if (mounted) {
-          _showSnackBar('Could not open gallery. Try again.', isError: true);
-        }
-      }
-    }
-  }
-
-  Future<void> _uploadPhoto(File file) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return;
-
-      final storageRef = FirebaseStorage.instance.ref().child(
-        'profile_photos/${user.uid}.jpg',
-      );
-
-      // Read as bytes to avoid native URI permission errors on Android 13+
-      final bytes = await file.readAsBytes();
-      final snapshot = await storageRef.putData(
-        bytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-
-      final url = await snapshot.ref.getDownloadURL();
-
-      await _firestore.collection('users').doc(user.uid).set({
-        'photoUrl': url,
-      }, SetOptions(merge: true));
-
-      await user.updatePhotoURL(url);
-
-      if (mounted) {
-        setState(() => _photoUrl = url);
-        _showSnackBar(AppLocalizations.of(context).profileUpdated);
-      }
-    } on FirebaseException catch (e) {
-      if (e.code == 'object-not-found') {
-        if (mounted) {
-          _showSnackBar(
-            'Storage not initialized! Please enable Firebase Storage in the Firebase Console.',
-            isError: true,
-          );
-          setState(() => _pickedPhoto = null);
-        }
-      } else {
-        if (mounted) {
-          _showSnackBar('Firebase error: ${e.message ?? e.code}', isError: true);
-          setState(() => _pickedPhoto = null);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Failed to upload photo: $e', isError: true);
-        setState(() => _pickedPhoto = null);
-      }
-    } finally {
-      if (mounted) setState(() => _isUploadingPhoto = false);
-    }
-  }
-
-  void _showSettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text(
-          'Permission Required',
-          style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
-        ),
-        content: Text(
-          'Gallery access is blocked. Please open Settings → App Permissions → Photos and allow access.',
-          style: GoogleFonts.cairo(fontSize: 14, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.cairo(color: Colors.grey.shade600),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5C3A1E),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              openAppSettings();
-            },
-            child: Text(
-              'Open Settings',
-              style: GoogleFonts.cairo(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _saveChanges() async {
@@ -365,13 +212,18 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.white,
-                  ),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+                // Only show back button when this screen was pushed as a route
+                // (not when accessed via IndexedStack tab — pop() would do nothing)
+                if (Navigator.canPop(context))
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                else
+                  const SizedBox(width: 48),
                 const Spacer(),
                 Text(
                   l.myProfile,
@@ -388,86 +240,51 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ── Tappable avatar ──────────────────────────────────────────
-          GestureDetector(
-            onTap: _pickAndUploadPhoto,
-            child: Stack(
-              children: [
-                Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kGoldenDate,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: _isUploadingPhoto
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : _pickedPhoto != null
-                        ? Image.file(_pickedPhoto!, fit: BoxFit.cover)
-                        : (_photoUrl != null && _photoUrl!.isNotEmpty)
-                        ? Image.network(
-                            _photoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Center(
-                              child: Text(
-                                _userInitial,
-                                style: GoogleFonts.cairo(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: Text(
-                              _userInitial,
-                              style: GoogleFonts.cairo(
-                                fontSize: 38,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-                // Gold camera badge
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: kGoldenDate,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ),
+          // ── Static avatar (image editing temporarily disabled) ────────
+          Container(
+            width: 92,
+            height: 92,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kGoldenDate,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.5),
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
+            ),
+            child: ClipOval(
+              child: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                  ? Image.network(
+                      _photoUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Center(
+                        child: Text(
+                          _userInitial,
+                          style: GoogleFonts.cairo(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _userInitial,
+                        style: GoogleFonts.cairo(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
           ),
 

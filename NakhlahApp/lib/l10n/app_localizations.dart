@@ -46,6 +46,7 @@ class AppLocalizations {
   String get identifyInSeconds => isArabic
       ? 'تعرف على أصناف التمر في ثوانٍ'
       : 'Identify date varieties in seconds';
+  String get greeting => isArabic ? 'مرحباً' : 'Marhaba';
 
   // ── Profile ─────────────────────────────────────────────────────────────
   String get myProfile => isArabic ? 'ملفي الشخصي' : 'My Profile';

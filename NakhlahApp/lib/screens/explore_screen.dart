@@ -2,13 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
-import 'scan_screen.dart';
-import 'market_screen.dart' as market_screen;
-import 'manage_profile_screen.dart';
 
 const Color _kBg = Color(0xFFF5F0EB);
 const Color _kBrown = Color(0xFF3B1F13);
-const Color _kBrown700 = Color(0xFF5C3A1E);
 const Color _kGold = Color(0xFFE8B84B);
 const Color _kCard = Color(0xFFFFFFFF);
 const Color _kChipActive = Color(0xFF3B1F13);
@@ -95,7 +91,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String _selectedFilter = 'all';
   String _searchQuery = '';
   bool _isGrid = true;
-  int _navIndex = 1;
 
   final _searchCtrl = TextEditingController();
 
@@ -129,9 +124,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: _kBg,
-      bottomNavigationBar: _buildBottomNav(),
       body: SafeArea(
-        bottom: true,
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -283,124 +277,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  // ── Bottom Nav ─────────────────────────────────────────────────────────────
-  Widget _buildBottomNav() {
-    final l = AppLocalizations.of(context);
-    final items = [
-      {'icon': Icons.home_rounded, 'label': l.home},
-      {'icon': Icons.explore_outlined, 'label': l.explore},
-      {'icon': Icons.filter_center_focus_rounded, 'label': l.scan},
-      {'icon': Icons.shopping_bag_outlined, 'label': l.market},
-      {'icon': Icons.person_outline_rounded, 'label': l.profile},
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: _kBrown.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: List.generate(items.length, (i) {
-              final isCenter = i == 2;
-              final isSelected = i == _navIndex;
-              final color = isSelected ? _kBrown700 : Colors.grey.shade400;
-
-              if (isCenter) {
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const ScanScreen()),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: _kBrown,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: _kBrown.withValues(alpha: 0.35),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.filter_center_focus_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    if (i == 0) {
-                      Navigator.of(context).pop();
-                    } else if (i == 3) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (_) => const market_screen.MarketScreen(),
-                        ),
-                      );
-                    } else if (i == 4) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ManageProfileScreen(),
-                        ),
-                      );
-                    } else {
-                      setState(() => _navIndex = i);
-                    }
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        items[i]['icon'] as IconData,
-                        color: color,
-                        size: 22,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        items[i]['label'] as String,
-                        style: GoogleFonts.cairo(
-                          fontSize: 11,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ── Grid Card ─────────────────────────────────────────────────────────────────
