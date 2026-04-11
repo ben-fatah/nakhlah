@@ -2,24 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart'; // palette constants
+import '../theme/app_colors.dart';
+import '../core/logger.dart';
+import '../core/validators.dart';
 import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
 import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
 import 'home_page.dart';
-
-// ── Design tokens matching the sign-up screen ───────────────────────────────
-const Color _kBgCream = Color(0xFFFAF6F1);
-const Color _kFieldBg = Color(0xFFFFFDFA);
-const Color _kFieldBorder = Color(0xFFE8E0D6);
-const Color _kFieldIcon = Color(0xFF8B7355);
-const Color _kLabelColor = Color(0xFF5C4A3A);
-const Color _kHintColor = Color(0xFFBDB0A3);
-const Color _kTitleColor = Color(0xFF3E2C1F);
-const Color _kButtonBg = Color(0xFF4A3728);
-const Color _kLinkBrown = Color(0xFF6B4F3A);
-const Color _kTermsText = Color(0xFF9E8E7E);
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -73,15 +63,14 @@ class _SignInScreenState extends State<SignInScreen>
     setState(() => _isLoading = true);
 
     try {
-      debugPrint('[SignIn] Starting email/password sign-in...');
-      debugPrint('[SignIn] Email: ${_emailCtrl.text.trim()}');
+      AppLogger.d('[SignIn] Starting email/password sign-in...');
 
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
       );
 
-      debugPrint('[SignIn] Success: ${userCredential.user?.email}');
+      AppLogger.d('[SignIn] Success');
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -90,13 +79,12 @@ class _SignInScreenState extends State<SignInScreen>
         );
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint('[SignIn ERROR] Code: ${e.code} | Message: ${e.message}');
+      AppLogger.e('[SignIn ERROR] Code: ${e.code}');
       if (mounted) {
         setState(() => _errorMsg = _friendlyError(e.code));
       }
     } catch (e, st) {
-      debugPrint('[SignIn ERROR] $e');
-      debugPrint('[SignIn ERROR] StackTrace: $st');
+      AppLogger.e('[SignIn ERROR] $e', error: e, stackTrace: st);
       if (mounted) {
         setState(() => _errorMsg = 'Sign-in error: $e');
       }
@@ -141,7 +129,7 @@ class _SignInScreenState extends State<SignInScreen>
           style: GoogleFonts.cairo(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: _kLabelColor,
+            color: AppColors.labelColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -149,13 +137,16 @@ class _SignInScreenState extends State<SignInScreen>
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
-          style: GoogleFonts.cairo(fontSize: 15, color: _kTitleColor),
+          style: GoogleFonts.cairo(fontSize: 15, color: AppColors.titleColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.cairo(fontSize: 14, color: _kHintColor),
+            hintStyle: GoogleFonts.cairo(
+              fontSize: 14,
+              color: AppColors.hintColor,
+            ),
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 14, right: 10),
-              child: Icon(icon, size: 20, color: _kFieldIcon),
+              child: Icon(icon, size: 20, color: AppColors.fieldIcon),
             ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: 44,
@@ -163,22 +154,25 @@ class _SignInScreenState extends State<SignInScreen>
             ),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: _kFieldBg,
+            fillColor: AppColors.fieldBg,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldBorder),
+              borderSide: const BorderSide(color: AppColors.fieldBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldBorder),
+              borderSide: const BorderSide(color: AppColors.fieldBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldIcon, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.fieldIcon,
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -186,7 +180,10 @@ class _SignInScreenState extends State<SignInScreen>
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              borderSide: BorderSide(
+                color: Colors.red.shade400,
+                width: 1.5,
+              ),
             ),
           ),
           validator: validator,
@@ -199,7 +196,7 @@ class _SignInScreenState extends State<SignInScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBgCream,
+      backgroundColor: AppColors.bgCream,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeIn,
@@ -222,7 +219,7 @@ class _SignInScreenState extends State<SignInScreen>
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.eco_rounded,
                         size: 56,
-                        color: kPalmGreen,
+                        color: AppColors.palmGreen,
                       ),
                     ),
                   ),
@@ -235,7 +232,7 @@ class _SignInScreenState extends State<SignInScreen>
                     style: GoogleFonts.cairo(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: _kTitleColor,
+                      color: AppColors.titleColor,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -247,17 +244,7 @@ class _SignInScreenState extends State<SignInScreen>
                     icon: Icons.email_outlined,
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Email is required.';
-                      }
-                      if (!RegExp(
-                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                      ).hasMatch(v.trim())) {
-                        return 'Enter a valid email address.';
-                      }
-                      return null;
-                    },
+                    validator: AppValidators.email,
                   ),
                   const SizedBox(height: 18),
 
@@ -273,7 +260,7 @@ class _SignInScreenState extends State<SignInScreen>
                         _obscure
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        color: _kHintColor,
+                        color: AppColors.hintColor,
                         size: 20,
                       ),
                       onPressed: () => setState(() => _obscure = !_obscure),
@@ -292,12 +279,14 @@ class _SignInScreenState extends State<SignInScreen>
                           builder: (_) => const ResetPasswordScreen(),
                         ),
                       ),
-                      style: TextButton.styleFrom(foregroundColor: _kLinkBrown),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.linkBrown,
+                      ),
                       child: Text(
                         AppLocalizations.of(context).forgotPassword,
                         style: GoogleFonts.cairo(
                           fontWeight: FontWeight.w600,
-                          color: _kLinkBrown,
+                          color: AppColors.linkBrown,
                         ),
                       ),
                     ),
@@ -346,9 +335,9 @@ class _SignInScreenState extends State<SignInScreen>
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _signIn,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kButtonBg,
+                        backgroundColor: AppColors.buttonBg,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: _kButtonBg.withValues(
+                        disabledBackgroundColor: AppColors.buttonBg.withValues(
                           alpha: 0.5,
                         ),
                         shape: RoundedRectangleBorder(
@@ -374,11 +363,14 @@ class _SignInScreenState extends State<SignInScreen>
                   ),
                   const SizedBox(height: 20),
 
-                  // ── OR Divider ───────────────────────────────────────────
+                  // ── OR Divider ────────────────────────────────────────
                   Row(
                     children: [
                       Expanded(
-                        child: Divider(color: _kFieldBorder, thickness: 1),
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -387,18 +379,21 @@ class _SignInScreenState extends State<SignInScreen>
                           style: GoogleFonts.cairo(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: _kHintColor,
+                            color: AppColors.hintColor,
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Divider(color: _kFieldBorder, thickness: 1),
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Google Sign-In Button ────────────────────────────────
+                  // ── Google Sign-In Button ─────────────────────────────
                   SizedBox(
                     height: 54,
                     child: OutlinedButton(
@@ -407,14 +402,14 @@ class _SignInScreenState extends State<SignInScreen>
                           : () async {
                               setState(() => _isGoogleLoading = true);
                               try {
-                                debugPrint(
+                                AppLogger.d(
                                   '[GoogleSignIn] Starting Google sign-in...',
                                 );
                                 final result =
                                     await AuthService.signInWithGoogle();
-                                debugPrint('[GoogleSignIn] Result: $result');
+                                AppLogger.d('[GoogleSignIn] Result: $result');
                                 if (result != null && mounted) {
-                                  debugPrint(
+                                  AppLogger.d(
                                     '[GoogleSignIn] Success, navigating to HomePage',
                                   );
                                   if (context.mounted) {
@@ -426,18 +421,19 @@ class _SignInScreenState extends State<SignInScreen>
                                     );
                                   }
                                 } else if (result == null) {
-                                  debugPrint(
+                                  AppLogger.d(
                                     '[GoogleSignIn] User cancelled sign-in',
                                   );
                                   if (mounted) {
                                     setState(
-                                      () => _errorMsg = 'Sign-in cancelled.',
+                                      () =>
+                                          _errorMsg = 'Sign-in cancelled.',
                                     );
                                   }
                                 }
                               } on FirebaseAuthException catch (e) {
-                                debugPrint(
-                                  '[GoogleSignIn ERROR] FirebaseAuthException: ${e.code} - ${e.message}',
+                                AppLogger.e(
+                                  '[GoogleSignIn ERROR] FirebaseAuthException: ${e.code}',
                                 );
                                 if (mounted) {
                                   setState(
@@ -446,12 +442,15 @@ class _SignInScreenState extends State<SignInScreen>
                                   );
                                 }
                               } catch (e, st) {
-                                debugPrint('[GoogleSignIn ERROR] Exception: $e');
-                                debugPrint('[GoogleSignIn ERROR] StackTrace: $st');
+                                AppLogger.e(
+                                  '[GoogleSignIn ERROR] Exception: $e',
+                                  error: e,
+                                  stackTrace: st,
+                                );
                                 if (mounted) {
                                   setState(
-                                    () =>
-                                        _errorMsg = 'Google sign-in failed: $e',
+                                    () => _errorMsg =
+                                        'Google sign-in failed: $e',
                                   );
                                 }
                               } finally {
@@ -461,21 +460,24 @@ class _SignInScreenState extends State<SignInScreen>
                               }
                             },
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: _kFieldBorder, width: 1.5),
+                        side: const BorderSide(
+                          color: AppColors.fieldBorder,
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        backgroundColor: _kFieldBg,
-                        foregroundColor: _kTitleColor,
+                        backgroundColor: AppColors.fieldBg,
+                        foregroundColor: AppColors.titleColor,
                         elevation: 0,
                       ),
                       child: _isGoogleLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                color: _kFieldIcon,
+                                color: AppColors.fieldIcon,
                               ),
                             )
                           : Row(
@@ -496,7 +498,7 @@ class _SignInScreenState extends State<SignInScreen>
                                   style: GoogleFonts.cairo(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: _kTitleColor,
+                                    color: AppColors.titleColor,
                                   ),
                                 ),
                               ],
@@ -513,7 +515,7 @@ class _SignInScreenState extends State<SignInScreen>
                         AppLocalizations.of(context).noAccount,
                         style: GoogleFonts.cairo(
                           fontSize: 14,
-                          color: _kTermsText,
+                          color: AppColors.termsText,
                         ),
                       ),
                       GestureDetector(
@@ -527,9 +529,9 @@ class _SignInScreenState extends State<SignInScreen>
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: _kTitleColor,
+                            color: AppColors.titleColor,
                             decoration: TextDecoration.underline,
-                            decorationColor: _kTitleColor,
+                            decorationColor: AppColors.titleColor,
                           ),
                         ),
                       ),

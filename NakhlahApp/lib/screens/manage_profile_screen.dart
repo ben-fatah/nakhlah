@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart';
+import '../theme/app_colors.dart';
+import '../core/validators.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
+import '../repositories/user_repository.dart';
 import 'sign_in_screen.dart';
 
 class ManageProfileScreen extends StatefulWidget {
@@ -26,7 +27,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   String? _photoUrl;
 
   final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _userRepo = UserRepository();
 
   @override
   void initState() {
@@ -48,12 +49,15 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       return;
     }
     try {
-      final snap = await _firestore.collection('users').doc(user.uid).get();
-      if (snap.exists && mounted) {
-        final data = snap.data()!;
-        _nameCtrl.text = data['fullName'] ?? '';
-        _emailCtrl.text = data['email'] ?? user.email ?? '';
-        _photoUrl = data['photoUrl'] ?? user.photoURL ?? '';
+      final appUser = await _userRepo.getUser(user.uid);
+      if (appUser != null && mounted) {
+        _nameCtrl.text = appUser.fullName;
+        _emailCtrl.text = appUser.email.isNotEmpty
+            ? appUser.email
+            : user.email ?? '';
+        _photoUrl = appUser.photoUrl.isNotEmpty
+            ? appUser.photoUrl
+            : user.photoURL ?? '';
       } else if (mounted) {
         _emailCtrl.text = user.email ?? '';
         _photoUrl = user.photoURL ?? '';
@@ -71,11 +75,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     if (user == null) return;
     setState(() => _isLoading = true);
     try {
-      await _firestore.collection('users').doc(user.uid).set({
+      await _userRepo.updateUser(user.uid, {
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
       if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
     } catch (e) {
       if (mounted) {
@@ -100,9 +103,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError
-            ? Colors.red.shade700
-            : const Color(0xFF5C3A1E),
+        backgroundColor: isError ? Colors.red.shade700 : AppColors.brown700,
         margin: const EdgeInsets.all(16),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -118,7 +119,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         content: Text(
           isNowArabic ? 'تم التبديل إلى العربية 🌙' : 'Switched to English 🌍',
         ),
-        backgroundColor: const Color(0xFF5C3A1E),
+        backgroundColor: AppColors.brown700,
         margin: const EdgeInsets.all(16),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -143,10 +144,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: kOffWhite,
+        backgroundColor: AppColors.offWhite,
         body: _isFetching
             ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF5C3A1E)),
+                child: CircularProgressIndicator(color: AppColors.brown700),
               )
             : SingleChildScrollView(
                 child: Column(
@@ -197,7 +198,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF5C3A1E), Color(0xFF6B4423)],
+          colors: [AppColors.brown700, Color(0xFF6B4423)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -246,7 +247,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             height: 92,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: kGoldenDate,
+              color: AppColors.goldenDate,
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.5),
                 width: 3,
@@ -314,11 +315,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: kCardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5C3A1E).withValues(alpha: 0.06),
+            color: AppColors.brown700.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -329,14 +330,18 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.edit_rounded, color: kGoldenDate, size: 20),
+              const Icon(
+                Icons.edit_rounded,
+                color: AppColors.goldenDate,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 l.editInformation,
                 style: GoogleFonts.cairo(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF5C3A1E),
+                  color: AppColors.brown700,
                 ),
               ),
             ],
@@ -349,8 +354,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               labelText: l.fullName,
               prefixIcon: const Icon(Icons.person_outline_rounded),
             ),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Name is required.' : null,
+            validator: AppValidators.fullName,
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -360,13 +364,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               labelText: l.emailAddress,
               prefixIcon: const Icon(Icons.email_outlined),
             ),
-            validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Email is required.';
-              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
-                return 'Enter a valid email address.';
-              }
-              return null;
-            },
+            validator: AppValidators.email,
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -374,11 +372,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _saveChanges,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF5C3A1E),
+                backgroundColor: AppColors.brown700,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(
-                  0xFF5C3A1E,
-                ).withValues(alpha: 0.4),
+                disabledBackgroundColor: AppColors.brown700.withValues(
+                  alpha: 0.4,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -394,7 +392,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                             strokeWidth: 2.5,
                           ),
                         )
-                      : const Icon(Icons.check_circle_outline_rounded, size: 20),
+                      : const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 20,
+                        ),
                 ],
               ),
             ),
@@ -429,11 +430,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   Widget _buildSettingsList(AppLocalizations l) {
     return Container(
       decoration: BoxDecoration(
-        color: kCardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5C3A1E).withValues(alpha: 0.06),
+            color: AppColors.brown700.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -456,10 +457,10 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF5C3A1E).withValues(alpha: 0.08),
+                      color: AppColors.brown700.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFF5C3A1E).withValues(alpha: 0.2),
+                        color: AppColors.brown700.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Row(
@@ -470,14 +471,14 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                           style: GoogleFonts.cairo(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF5C3A1E),
+                            color: AppColors.brown700,
                           ),
                         ),
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.swap_horiz_rounded,
                           size: 16,
-                          color: Color(0xFF5C3A1E),
+                          color: AppColors.brown700,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -502,7 +503,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             label: l.dietaryGoals,
             trailing: const Icon(
               Icons.chevron_right_rounded,
-              color: kGoldenDate,
+              color: AppColors.goldenDate,
               size: 22,
             ),
             onTap: () => _showSnackBar('Dietary goals coming soon!'),
@@ -527,7 +528,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           width: 4,
           height: 20,
           decoration: BoxDecoration(
-            color: kGoldenDate,
+            color: AppColors.goldenDate,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -537,7 +538,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           style: GoogleFonts.cairo(
             fontSize: 17,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF5C3A1E),
+            color: AppColors.brown700,
           ),
         ),
       ],
@@ -562,12 +563,12 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: kCardWhite,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kBorderLight),
+        border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF5C3A1E).withValues(alpha: 0.05),
+            color: AppColors.brown700.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 3),
           ),
@@ -580,9 +581,9 @@ class _StatCard extends StatelessWidget {
             height: 50,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: kGoldenDate.withValues(alpha: 0.12),
+              color: AppColors.goldenDate.withValues(alpha: 0.12),
             ),
-            child: Icon(icon, color: kGoldenDate, size: 24),
+            child: Icon(icon, color: AppColors.goldenDate, size: 24),
           ),
           const SizedBox(height: 14),
           Text(
@@ -590,7 +591,7 @@ class _StatCard extends StatelessWidget {
             style: GoogleFonts.cairo(
               fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: const Color(0xFF5C3A1E),
+              color: AppColors.brown700,
             ),
           ),
           const SizedBox(height: 2),
@@ -627,7 +628,7 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? Colors.red.shade600 : const Color(0xFF5C3A1E);
+    final color = isDestructive ? Colors.red.shade600 : AppColors.brown700;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
@@ -638,7 +639,7 @@ class _SettingsTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           color: isDestructive
               ? Colors.red.withValues(alpha: 0.08)
-              : const Color(0xFF5C3A1E).withValues(alpha: 0.08),
+              : AppColors.brown700.withValues(alpha: 0.08),
         ),
         child: Icon(icon, color: color, size: 20),
       ),

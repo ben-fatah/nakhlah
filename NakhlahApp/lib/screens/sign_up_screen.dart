@@ -1,26 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../main.dart'; // palette constants
+import '../theme/app_colors.dart';
+import '../core/logger.dart';
+import '../core/validators.dart';
 import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
+import '../models/user_model.dart';
+import '../repositories/user_repository.dart';
 import 'sign_in_screen.dart';
 import 'home_page.dart';
-
-// ── Design tokens for the sign-up screen ────────────────────────────────────
-const Color _kBgCream = Color(0xFFFAF6F1);
-const Color _kFieldBg = Color(0xFFFFFDFA);
-const Color _kFieldBorder = Color(0xFFE8E0D6);
-const Color _kFieldIcon = Color(0xFF8B7355);
-const Color _kLabelColor = Color(0xFF5C4A3A);
-const Color _kHintColor = Color(0xFFBDB0A3);
-const Color _kTitleColor = Color(0xFF3E2C1F);
-const Color _kButtonBg = Color(0xFF4A3728);
-const Color _kLinkBrown = Color(0xFF6B4F3A);
-const Color _kTermsText = Color(0xFF9E8E7E);
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -51,7 +42,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
   // ── Firebase ──────────────────────────────────────────────────────────────
   final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _userRepo = UserRepository();
 
   // ── Animation ─────────────────────────────────────────────────────────────
   late final AnimationController _fadeCtrl;
@@ -107,11 +98,14 @@ class _SignUpScreenState extends State<SignUpScreen>
       await credential.user!.updateDisplayName(_nameCtrl.text.trim());
       await credential.user!.reload();
 
-      await _firestore.collection('users').doc(credential.user!.uid).set({
-        'fullName': _nameCtrl.text.trim(),
-        'email': _emailCtrl.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      // Save user to Firestore via repository
+      await _userRepo.saveUser(
+        AppUser(
+          uid: credential.user!.uid,
+          fullName: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+        ),
+      );
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -120,12 +114,10 @@ class _SignUpScreenState extends State<SignUpScreen>
         );
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint(
-        'FirebaseAuthException — code: ${e.code} | message: ${e.message}',
-      );
+      AppLogger.e('FirebaseAuthException — code: ${e.code}');
       if (mounted) _showSnackBar(e.message ?? 'Sign-up failed (${e.code}).');
     } catch (e, st) {
-      debugPrint('Unexpected sign-up error: $e\n$st');
+      AppLogger.e('Unexpected sign-up error: $e', error: e, stackTrace: st);
       if (mounted) _showSnackBar('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -162,7 +154,7 @@ class _SignUpScreenState extends State<SignUpScreen>
           style: GoogleFonts.cairo(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: _kLabelColor,
+            color: AppColors.labelColor,
           ),
         ),
         const SizedBox(height: 8),
@@ -171,13 +163,16 @@ class _SignUpScreenState extends State<SignUpScreen>
           obscureText: obscure,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          style: GoogleFonts.cairo(fontSize: 15, color: _kTitleColor),
+          style: GoogleFonts.cairo(fontSize: 15, color: AppColors.titleColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.cairo(fontSize: 14, color: _kHintColor),
+            hintStyle: GoogleFonts.cairo(
+              fontSize: 14,
+              color: AppColors.hintColor,
+            ),
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 14, right: 10),
-              child: Icon(icon, size: 20, color: _kFieldIcon),
+              child: Icon(icon, size: 20, color: AppColors.fieldIcon),
             ),
             prefixIconConstraints: const BoxConstraints(
               minWidth: 44,
@@ -185,22 +180,25 @@ class _SignUpScreenState extends State<SignUpScreen>
             ),
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: _kFieldBg,
+            fillColor: AppColors.fieldBg,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldBorder),
+              borderSide: const BorderSide(color: AppColors.fieldBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldBorder),
+              borderSide: const BorderSide(color: AppColors.fieldBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: _kFieldIcon, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.fieldIcon,
+                width: 1.5,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -249,7 +247,7 @@ class _SignUpScreenState extends State<SignUpScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBgCream,
+      backgroundColor: AppColors.bgCream,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeIn,
@@ -271,7 +269,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                       ),
                       icon: const Icon(
                         Icons.arrow_back,
-                        color: _kTitleColor,
+                        color: AppColors.titleColor,
                         size: 24,
                       ),
                       padding: EdgeInsets.zero,
@@ -290,7 +288,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.eco_rounded,
                         size: 56,
-                        color: kPalmGreen,
+                        color: AppColors.palmGreen,
                       ),
                     ),
                   ),
@@ -303,7 +301,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                     style: GoogleFonts.cairo(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: _kTitleColor,
+                      color: AppColors.titleColor,
                     ),
                   ),
                   const SizedBox(height: 28),
@@ -315,9 +313,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                     icon: Icons.person_outline_rounded,
                     controller: _nameCtrl,
                     textCapitalization: TextCapitalization.words,
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Name is required.'
-                        : null,
+                    validator: AppValidators.fullName,
                   ),
                   const SizedBox(height: 18),
 
@@ -328,17 +324,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                     icon: Icons.email_outlined,
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Email is required.';
-                      }
-                      if (!RegExp(
-                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                      ).hasMatch(v.trim())) {
-                        return 'Enter a valid email address.';
-                      }
-                      return null;
-                    },
+                    validator: AppValidators.email,
                   ),
                   const SizedBox(height: 18),
 
@@ -354,27 +340,13 @@ class _SignUpScreenState extends State<SignUpScreen>
                         _obscurePassword
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        color: _kHintColor,
+                        color: AppColors.hintColor,
                         size: 20,
                       ),
                       onPressed: () =>
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Password is required.';
-                      }
-                      if (v.length < 8) {
-                        return 'Must be at least 8 characters.';
-                      }
-                      if (!v.contains(RegExp(r'[A-Z]'))) {
-                        return 'Must contain at least one capital letter.';
-                      }
-                      if (!v.contains(RegExp(r'[0-9]'))) {
-                        return 'Must contain at least one number.';
-                      }
-                      return null;
-                    },
+                    validator: AppValidators.password,
                   ),
 
                   // ── Password requirements checklist ─────────────────────
@@ -398,15 +370,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                     icon: Icons.lock_outline_rounded,
                     controller: _confirmPasswordCtrl,
                     obscure: _obscureConfirm,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Please confirm your password.';
-                      }
-                      if (v != _passwordCtrl.text) {
-                        return 'Passwords do not match.';
-                      }
-                      return null;
-                    },
+                    validator: (v) =>
+                        AppValidators.confirmPassword(v, _passwordCtrl.text),
                   ),
                   const SizedBox(height: 32),
 
@@ -416,9 +381,9 @@ class _SignUpScreenState extends State<SignUpScreen>
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _signUp,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _kButtonBg,
+                        backgroundColor: AppColors.buttonBg,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: _kButtonBg.withValues(
+                        disabledBackgroundColor: AppColors.buttonBg.withValues(
                           alpha: 0.5,
                         ),
                         shape: RoundedRectangleBorder(
@@ -448,7 +413,10 @@ class _SignUpScreenState extends State<SignUpScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: Divider(color: _kFieldBorder, thickness: 1),
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -457,12 +425,15 @@ class _SignUpScreenState extends State<SignUpScreen>
                           style: GoogleFonts.cairo(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: _kHintColor,
+                            color: AppColors.hintColor,
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Divider(color: _kFieldBorder, thickness: 1),
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
                       ),
                     ],
                   ),
@@ -502,21 +473,24 @@ class _SignUpScreenState extends State<SignUpScreen>
                               }
                             },
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: _kFieldBorder, width: 1.5),
+                        side: const BorderSide(
+                          color: AppColors.fieldBorder,
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(28),
                         ),
-                        backgroundColor: _kFieldBg,
-                        foregroundColor: _kTitleColor,
+                        backgroundColor: AppColors.fieldBg,
+                        foregroundColor: AppColors.titleColor,
                         elevation: 0,
                       ),
                       child: _isGoogleLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
-                                color: _kFieldIcon,
+                                color: AppColors.fieldIcon,
                               ),
                             )
                           : Row(
@@ -538,7 +512,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   style: GoogleFonts.cairo(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
-                                    color: _kTitleColor,
+                                    color: AppColors.titleColor,
                                   ),
                                 ),
                               ],
@@ -554,7 +528,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                       text: TextSpan(
                         style: GoogleFonts.cairo(
                           fontSize: 12,
-                          color: _kTermsText,
+                          color: AppColors.termsText,
                           height: 1.5,
                         ),
                         children: [
@@ -566,7 +540,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                             style: GoogleFonts.cairo(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _kLinkBrown,
+                              color: AppColors.linkBrown,
                               decoration: TextDecoration.none,
                             ),
                             recognizer: TapGestureRecognizer()..onTap = () {},
@@ -577,7 +551,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                             style: GoogleFonts.cairo(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _kLinkBrown,
+                              color: AppColors.linkBrown,
                               decoration: TextDecoration.none,
                             ),
                             recognizer: TapGestureRecognizer()..onTap = () {},
@@ -596,7 +570,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                         AppLocalizations.of(context).alreadyAccount,
                         style: GoogleFonts.cairo(
                           fontSize: 14,
-                          color: _kTermsText,
+                          color: AppColors.termsText,
                         ),
                       ),
                       GestureDetector(
@@ -610,9 +584,9 @@ class _SignUpScreenState extends State<SignUpScreen>
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: _kTitleColor,
+                            color: AppColors.titleColor,
                             decoration: TextDecoration.underline,
-                            decorationColor: _kTitleColor,
+                            decorationColor: AppColors.titleColor,
                           ),
                         ),
                       ),

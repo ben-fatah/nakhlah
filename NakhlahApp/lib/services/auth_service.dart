@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 
+import '../core/logger.dart';
+
 /// Centralized authentication service for social sign-in providers.
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -17,11 +19,11 @@ class AuthService {
   /// Google session first, so the user can choose a different account.
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      debugPrint('[AuthService] signInWithGoogle called, kIsWeb: $kIsWeb');
+      AppLogger.d('[AuthService] signInWithGoogle called, kIsWeb: $kIsWeb');
       UserCredential userCredential;
 
       if (kIsWeb) {
-        debugPrint('[AuthService] Using web-based Google Auth');
+        AppLogger.d('[AuthService] Using web-based Google Auth');
         // ── Web: use Firebase Auth popup directly ──────────────────────
         final provider = GoogleAuthProvider();
         provider.addScope('email');
@@ -31,39 +33,38 @@ class AuthService {
         provider.setCustomParameters({'prompt': 'select_account'});
         userCredential = await _auth.signInWithPopup(provider);
       } else {
-        debugPrint('[AuthService] Using mobile GoogleSignIn SDK');
+        AppLogger.d('[AuthService] Using mobile GoogleSignIn SDK');
         // ── Mobile: use google_sign_in package ─────────────────────────
         // Sign out first so the account picker is always shown.
-        debugPrint('[AuthService] Signing out from cached Google session...');
+        AppLogger.d('[AuthService] Signing out from cached Google session...');
         await _googleSignIn.signOut();
 
-        debugPrint('[AuthService] Showing Google sign-in dialog...');
+        AppLogger.d('[AuthService] Showing Google sign-in dialog...');
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
-          debugPrint('[AuthService] User cancelled Google sign-in');
+          AppLogger.d('[AuthService] User cancelled Google sign-in');
           return null; // user cancelled
         }
 
-        debugPrint('[AuthService] Got Google user: ${googleUser.email}');
-        debugPrint('[AuthService] Getting Google authentication tokens...');
+        AppLogger.d('[AuthService] Got Google user, getting auth tokens...');
         final GoogleSignInAuthentication googleAuth =
             await googleUser.authentication;
 
-        debugPrint('[AuthService] Creating Firebase credential...');
+        AppLogger.d('[AuthService] Creating Firebase credential...');
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
 
-        debugPrint('[AuthService] Signing in to Firebase with credential...');
+        AppLogger.d('[AuthService] Signing in to Firebase with credential...');
         userCredential = await _auth.signInWithCredential(credential);
       }
 
       // Persist user profile in Firestore (merge to avoid overwriting)
       final user = userCredential.user;
-      debugPrint('[AuthService] Firebase sign-in successful: ${user?.email}');
+      AppLogger.d('[AuthService] Firebase sign-in successful');
       if (user != null) {
-        debugPrint('[AuthService] Saving user to Firestore...');
+        AppLogger.d('[AuthService] Saving user to Firestore...');
         try {
           await _firestore.collection('users').doc(user.uid).set({
             'fullName': user.displayName ?? '',
@@ -73,32 +74,33 @@ class AuthService {
             'lastSignIn': FieldValue.serverTimestamp(),
             'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-          debugPrint('[AuthService] User saved to Firestore');
+          AppLogger.d('[AuthService] User saved to Firestore');
         } catch (e) {
-          debugPrint('[AuthService] Error saving user to Firestore: $e');
+          AppLogger.w('[AuthService] Error saving user to Firestore: $e');
           // Don't rethrow, Firestore error shouldn't block sign-in
         }
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      debugPrint('[AuthService] FirebaseAuthException: ${e.code} - ${e.message}');
+      AppLogger.e('[AuthService] FirebaseAuthException: ${e.code}');
       rethrow;
     } catch (e, st) {
-      debugPrint('[AuthService] Exception: $e');
-      debugPrint('[AuthService] StackTrace: $st');
+      AppLogger.e('[AuthService] Exception: $e', error: e, stackTrace: st);
 
       // Check for platform exception with API Exception 10
       if (e.toString().contains('PlatformException') &&
           e.toString().contains('10')) {
-        debugPrint(
+        AppLogger.w(
           '[AuthService] API Exception 10 detected - likely SHA-1 mismatch or missing Google Play Services',
         );
-        debugPrint(
+        AppLogger.w(
           '[AuthService] Fix: 1) Ensure Google Play Services is updated on device',
         );
-        debugPrint('[AuthService] Fix: 2) Get SHA-1 and add to Firebase Console');
-        debugPrint(
+        AppLogger.w(
+          '[AuthService] Fix: 2) Get SHA-1 and add to Firebase Console',
+        );
+        AppLogger.w(
           '[AuthService] Fix: 3) Run: cd android && ./gradlew signingReport',
         );
       }

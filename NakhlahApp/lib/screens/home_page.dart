@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
 import 'scan_screen.dart';
@@ -8,16 +6,15 @@ import 'explore_screen.dart';
 import 'market_screen.dart' as market;
 import '../providers/locale_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_bottom_nav_bar.dart';
+import '../repositories/user_repository.dart';
+import '../repositories/seller_repository.dart';
+import '../models/seller_model.dart';
 
 // ── IndexedStack tab indices ──────────────────────────────────────────────────
 // 0 = Home, 1 = Explore, 2 = Market, 3 = Profile
 // Scan is NOT in the stack — it is pushed as a modal route to isolate camera lifecycle.
-
-const Color kBrown900 = Color(0xFF3B1F13);
-const Color kBrown700 = Color(0xFF5C3A1E);
-const Color kBrown100 = Color(0xFFF2EDE8);
-const Color kGoldBadge = Color(0xFFE8B84B);
-const Color kCardBg = Color(0xFFEAE4DE);
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,8 +64,8 @@ class _HomePageState extends State<HomePage> {
     final stackIndex = _navToStackIndex[_selectedIndex] ?? 0;
 
     return Scaffold(
-      backgroundColor: kBrown100,
-      bottomNavigationBar: _BottomNav(
+      backgroundColor: AppColors.brown100,
+      bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
         homeLabel: l10n.home,
         exploreLabel: l10n.explore,
@@ -108,54 +105,22 @@ class _HomeContentState extends State<_HomeContent>
     ),
   ];
 
-  final List<_SellerItem> _sellers = const [
-    _SellerItem(
-      name: 'Al-Madina Farms',
-      rating: 4.9,
-      reviews: '1.2k',
-      isTop: true,
-    ),
-    _SellerItem(name: 'Royal Oasis', rating: 4.8, reviews: '850', isTop: true),
-  ];
+  final _userRepo = UserRepository();
+  final _sellerRepo = SellerRepository();
 
+  late final List<Seller> _sellers;
   String _firstName = '';
 
   @override
   void initState() {
     super.initState();
+    _sellers = _sellerRepo.getFeatured();
     _loadUserName();
   }
 
   Future<void> _loadUserName() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    if (user.displayName != null && user.displayName!.trim().isNotEmpty) {
-      if (mounted) {
-        setState(() => _firstName = user.displayName!.split(' ').first);
-      }
-      return;
-    }
-
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final fullName = doc.data()?['fullName'] as String? ?? '';
-      if (fullName.isNotEmpty) {
-        await user.updateDisplayName(fullName);
-        if (mounted) setState(() => _firstName = fullName.split(' ').first);
-      } else {
-        if (mounted) {
-          setState(() => _firstName = (user.email ?? 'User').split('@').first);
-        }
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _firstName = (user.email ?? 'User').split('@').first);
-      }
-    }
+    final name = await _userRepo.resolveFirstName();
+    if (mounted) setState(() => _firstName = name);
   }
 
   @override
@@ -247,7 +212,7 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF3B1F13), Color(0xFF5C3A1E)],
+          colors: [AppColors.brown900, AppColors.brown700],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -385,7 +350,7 @@ class _ScanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.08),
+            color: AppColors.brown900.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -402,7 +367,7 @@ class _ScanCard extends StatelessWidget {
                   style: GoogleFonts.cairo(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: kBrown900,
+                    color: AppColors.brown900,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -422,7 +387,7 @@ class _ScanCard extends StatelessWidget {
                       vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: kBrown700,
+                      color: AppColors.brown700,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -491,7 +456,7 @@ class _SectionHeader extends StatelessWidget {
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: kBrown900,
+              color: AppColors.brown900,
             ),
           ),
           TextButton(
@@ -531,7 +496,7 @@ class _ScanCard2 extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.07),
+            color: AppColors.brown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -568,7 +533,7 @@ class _ScanCard2 extends StatelessWidget {
                   style: GoogleFonts.cairo(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    color: kBrown900,
+                    color: AppColors.brown900,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -578,7 +543,7 @@ class _ScanCard2 extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withValues(alpha: 0.18),
+                    color: AppColors.goldBadge.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -586,7 +551,7 @@ class _ScanCard2 extends StatelessWidget {
                     style: GoogleFonts.cairo(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF8B6914),
+                      color: AppColors.goldDark,
                     ),
                   ),
                 ),
@@ -612,7 +577,7 @@ class _ScanItem {
 
 // ── Seller Card ───────────────────────────────────────────────────────────────
 class _SellerCard extends StatelessWidget {
-  final _SellerItem item;
+  final Seller item;
   const _SellerCard({required this.item});
 
   @override
@@ -626,7 +591,7 @@ class _SellerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withValues(alpha: 0.07),
+            color: AppColors.brown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -640,13 +605,13 @@ class _SellerCard extends StatelessWidget {
               Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(
-                  color: kBrown100,
+                decoration: const BoxDecoration(
+                  color: AppColors.brown100,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.eco_rounded,
-                  color: kBrown700,
+                  color: AppColors.brown700,
                   size: 22,
                 ),
               ),
@@ -658,20 +623,24 @@ class _SellerCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withValues(alpha: 0.15),
+                    color: AppColors.goldBadge.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.verified_rounded, color: kGoldBadge, size: 12),
+                      const Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.goldBadge,
+                        size: 12,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         'TOP',
                         style: GoogleFonts.cairo(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF8B6914),
+                          color: AppColors.goldDark,
                         ),
                       ),
                     ],
@@ -685,13 +654,17 @@ class _SellerCard extends StatelessWidget {
             style: GoogleFonts.cairo(
               fontWeight: FontWeight.w700,
               fontSize: 14,
-              color: kBrown900,
+              color: AppColors.brown900,
             ),
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Icon(Icons.star_rounded, color: kGoldBadge, size: 15),
+              const Icon(
+                Icons.star_rounded,
+                color: AppColors.goldBadge,
+                size: 15,
+              ),
               const SizedBox(width: 3),
               Text(
                 '${item.rating} (${item.reviews})',
@@ -703,161 +676,6 @@ class _SellerCard extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SellerItem {
-  final String name;
-  final double rating;
-  final String reviews;
-  final bool isTop;
-  const _SellerItem({
-    required this.name,
-    required this.rating,
-    required this.reviews,
-    required this.isTop,
-  });
-}
-
-// ── Bottom Navigation Bar ─────────────────────────────────────────────────────
-class _BottomNav extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-  final String homeLabel, exploreLabel, marketLabel, profileLabel;
-
-  const _BottomNav({
-    required this.selectedIndex,
-    required this.onTap,
-    required this.homeLabel,
-    required this.exploreLabel,
-    required this.marketLabel,
-    required this.profileLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: kBrown900.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                label: homeLabel,
-                index: 0,
-                selected: selectedIndex,
-                onTap: onTap,
-              ),
-              _NavItem(
-                icon: Icons.explore_outlined,
-                label: exploreLabel,
-                index: 1,
-                selected: selectedIndex,
-                onTap: onTap,
-              ),
-
-              // ── Centre FAB — NO label underneath ──────────────────────
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onTap(2),
-                  child: Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: kBrown900,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: kBrown900.withValues(alpha: 0.4),
-                            blurRadius: 14,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.filter_center_focus_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              _NavItem(
-                icon: Icons.shopping_bag_outlined,
-                label: marketLabel,
-                index: 3,
-                selected: selectedIndex,
-                onTap: onTap,
-              ),
-              _NavItem(
-                icon: Icons.person_outline_rounded,
-                label: profileLabel,
-                index: 4,
-                selected: selectedIndex,
-                onTap: onTap,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int index, selected;
-  final ValueChanged<int> onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = index == selected;
-    final color = isSelected ? kBrown700 : Colors.grey.shade400;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: GoogleFonts.cairo(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

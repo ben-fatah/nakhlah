@@ -2,19 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_fonts/google_fonts.dart'; // palette constants
+import 'package:google_fonts/google_fonts.dart';
 
-// ── Design tokens matching sign-up / sign-in ────────────────────────────────
-const Color _kBgCream = Color(0xFFFAF6F1);
-const Color _kFieldBg = Color(0xFFFFFDFA);
-const Color _kFieldBorder = Color(0xFFE8E0D6);
-const Color _kFieldIcon = Color(0xFF8B7355);
-const Color _kLabelColor = Color(0xFF5C4A3A);
-const Color _kHintColor = Color(0xFFBDB0A3);
-const Color _kTitleColor = Color(0xFF3E2C1F);
-const Color _kButtonBg = Color(0xFF4A3728);
-const Color _kLinkBrown = Color(0xFF6B4F3A);
-const Color _kTermsText = Color(0xFF9E8E7E);
+import '../theme/app_colors.dart';
+import '../core/logger.dart';
+import '../core/validators.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -61,7 +53,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         _startCooldown();
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint('ResetPassword error — ${e.code}: ${e.message}');
+      AppLogger.e('ResetPassword error — ${e.code}');
       if (mounted) _showSnackBar(_friendlyError(e.code));
     } catch (e) {
       if (mounted) _showSnackBar('Something went wrong. Please try again.');
@@ -115,7 +107,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBgCream,
+      backgroundColor: AppColors.bgCream,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -133,7 +125,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(
                       Icons.arrow_back,
-                      color: _kTitleColor,
+                      color: AppColors.titleColor,
                       size: 24,
                     ),
                     padding: EdgeInsets.zero,
@@ -148,14 +140,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: _kFieldBg,
+                      color: AppColors.fieldBg,
                       shape: BoxShape.circle,
-                      border: Border.all(color: _kFieldBorder, width: 1.5),
+                      border: Border.all(
+                        color: AppColors.fieldBorder,
+                        width: 1.5,
+                      ),
                     ),
                     child: const Icon(
                       Icons.lock_reset_rounded,
                       size: 40,
-                      color: _kFieldIcon,
+                      color: AppColors.fieldIcon,
                     ),
                   ),
                 ),
@@ -168,14 +163,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   style: GoogleFonts.cairo(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
-                    color: _kTitleColor,
+                    color: AppColors.titleColor,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   "Enter your email and we'll send a reset link.",
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.cairo(fontSize: 14, color: _kTermsText),
+                  style: GoogleFonts.cairo(
+                    fontSize: 14,
+                    color: AppColors.termsText,
+                  ),
                 ),
                 const SizedBox(height: 36),
 
@@ -188,7 +186,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       style: GoogleFonts.cairo(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: _kLabelColor,
+                        color: AppColors.labelColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -197,20 +195,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       keyboardType: TextInputType.emailAddress,
                       style: GoogleFonts.cairo(
                         fontSize: 15,
-                        color: _kTitleColor,
+                        color: AppColors.titleColor,
                       ),
                       decoration: InputDecoration(
                         hintText: 'example@mail.com',
                         hintStyle: GoogleFonts.cairo(
                           fontSize: 14,
-                          color: _kHintColor,
+                          color: AppColors.hintColor,
                         ),
                         prefixIcon: Padding(
                           padding: const EdgeInsets.only(left: 14, right: 10),
                           child: Icon(
                             Icons.email_outlined,
                             size: 20,
-                            color: _kFieldIcon,
+                            color: AppColors.fieldIcon,
                           ),
                         ),
                         prefixIconConstraints: const BoxConstraints(
@@ -218,23 +216,27 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           minHeight: 0,
                         ),
                         filled: true,
-                        fillColor: _kFieldBg,
+                        fillColor: AppColors.fieldBg,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 16,
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: _kFieldBorder),
+                          borderSide: const BorderSide(
+                            color: AppColors.fieldBorder,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: _kFieldBorder),
+                          borderSide: const BorderSide(
+                            color: AppColors.fieldBorder,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: _kFieldIcon,
+                          borderSide: const BorderSide(
+                            color: AppColors.fieldIcon,
                             width: 1.5,
                           ),
                         ),
@@ -250,17 +252,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           ),
                         ),
                       ),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Email is required.';
-                        }
-                        if (!RegExp(
-                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                        ).hasMatch(v.trim())) {
-                          return 'Enter a valid email address.';
-                        }
-                        return null;
-                      },
+                      validator: AppValidators.email,
                     ),
                   ],
                 ),
@@ -274,9 +266,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ? null
                         : _sendResetEmail,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kButtonBg,
+                      backgroundColor: AppColors.buttonBg,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: _kButtonBg.withValues(
+                      disabledBackgroundColor: AppColors.buttonBg.withValues(
                         alpha: 0.5,
                       ),
                       shape: RoundedRectangleBorder(
@@ -313,22 +305,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          _kFieldIcon.withValues(alpha: 0.07),
-                          _kLinkBrown.withValues(alpha: 0.08),
+                          AppColors.fieldIcon.withValues(alpha: 0.07),
+                          AppColors.linkBrown.withValues(alpha: 0.08),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: _kFieldIcon.withValues(alpha: 0.2),
+                        color: AppColors.fieldIcon.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
                       children: [
                         Icon(
                           Icons.mark_email_read_outlined,
-                          color: _kFieldIcon,
+                          color: AppColors.fieldIcon,
                           size: 36,
                         ),
                         const SizedBox(height: 10),
@@ -337,7 +329,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           style: GoogleFonts.cairo(
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
-                            color: _kTitleColor,
+                            color: AppColors.titleColor,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -346,7 +338,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.cairo(
                             fontSize: 13,
-                            color: _kTermsText,
+                            color: AppColors.termsText,
                           ),
                         ),
                       ],
@@ -363,7 +355,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       'Remember your password? ',
                       style: GoogleFonts.cairo(
                         fontSize: 14,
-                        color: _kTermsText,
+                        color: AppColors.termsText,
                       ),
                     ),
                     GestureDetector(
@@ -373,9 +365,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         style: GoogleFonts.cairo(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: _kTitleColor,
+                          color: AppColors.titleColor,
                           decoration: TextDecoration.underline,
-                          decorationColor: _kTitleColor,
+                          decorationColor: AppColors.titleColor,
                         ),
                       ),
                     ),

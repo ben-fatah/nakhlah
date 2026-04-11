@@ -3,99 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
-
-const Color _kBg = Color(0xFFF5F0EB);
-const Color _kBrown = Color(0xFF3B1F13);
-const Color _kBrown700 = Color(0xFF5C3A1E);
-const Color _kGold = Color(0xFFE8B84B);
-const Color _kCard = Color(0xFFFFFFFF);
-const Color _kChipActive = Color(0xFF3B1F13);
-
-// ── Data models ──────────────────────────────────────────────────────────────
-class _Product {
-  final String Function(AppLocalizations l) nameGetter;
-  final double rating;
-  final int reviews;
-  final double price;
-  final String Function(AppLocalizations l) unitGetter;
-  final String imagePath;
-  final String tag;
-  final bool isVerified;
-
-  const _Product({
-    required this.nameGetter,
-    required this.rating,
-    required this.reviews,
-    required this.price,
-    required this.unitGetter,
-    required this.imagePath,
-    required this.tag,
-    required this.isVerified,
-  });
-}
-
-final List<_Product> _allProducts = [
-  _Product(
-    nameGetter: (l) => l.premiumMedjool,
-    rating: 4.8,
-    reviews: 85,
-    price: 110,
-    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
-    imagePath: 'assets/images/medjool.png',
-    tag: 'medjool',
-    isVerified: true,
-  ),
-  _Product(
-    nameGetter: (l) => l.ajwaAlMadinah,
-    rating: 4.9,
-    reviews: 120,
-    price: 85,
-    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
-    imagePath: 'assets/images/ajwa.png',
-    tag: 'ajwa',
-    isVerified: true,
-  ),
-  _Product(
-    nameGetter: (l) => l.khalasAlAhsa,
-    rating: 4.5,
-    reviews: 67,
-    price: 130,
-    unitGetter: (l) => l.isArabic ? 'لكل ٣ كغ' : 'per 3 kg',
-    imagePath: 'assets/images/khalas.png',
-    tag: 'khalas',
-    isVerified: false,
-  ),
-  _Product(
-    nameGetter: (l) => l.sukkariMofatall,
-    rating: 4.7,
-    reviews: 42,
-    price: 45,
-    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
-    imagePath: 'assets/images/sukari.png',
-    tag: 'sukkari',
-    isVerified: true,
-  ),
-  _Product(
-    nameGetter: (l) => l.barhiGolden,
-    rating: 4.6,
-    reviews: 33,
-    price: 60,
-    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
-    imagePath: 'assets/images/barhi.png',
-    tag: 'barhi',
-    isVerified: false,
-  ),
-  _Product(
-    nameGetter: (l) => l.sagaiDates,
-    rating: 4.4,
-    reviews: 28,
-    price: 55,
-    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
-    imagePath: 'assets/images/sagai.png',
-    tag: 'sagai',
-    isVerified: false,
-  ),
-];
+import '../theme/app_colors.dart';
+import '../models/product_model.dart';
+import '../repositories/product_repository.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class MarketScreen extends StatefulWidget {
@@ -110,6 +20,7 @@ class _MarketScreenState extends State<MarketScreen> {
   String _searchQuery = '';
   final Set<int> _cart = {};
   final _searchCtrl = TextEditingController();
+  final _productRepo = ProductRepository();
 
   List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
     {'key': 'all', 'label': l.allVarieties},
@@ -119,14 +30,12 @@ class _MarketScreenState extends State<MarketScreen> {
     {'key': 'khalas', 'label': l.filterKhalas},
   ];
 
-  List<_Product> _filtered(AppLocalizations l) {
-    return _allProducts.where((p) {
-      final matchFilter = _selectedFilter == 'all' || p.tag == _selectedFilter;
-      final matchSearch =
-          _searchQuery.isEmpty ||
-          p.nameGetter(l).toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchFilter && matchSearch;
-    }).toList();
+  List<Product> _filtered(AppLocalizations l) {
+    return _productRepo.getFiltered(
+      l,
+      tag: _selectedFilter,
+      searchQuery: _searchQuery,
+    );
   }
 
   @override
@@ -142,7 +51,7 @@ class _MarketScreenState extends State<MarketScreen> {
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _kBg,
+        backgroundColor: AppColors.screenBg,
         body: SafeArea(
           bottom: false,
           child: Column(
@@ -185,12 +94,12 @@ class _MarketScreenState extends State<MarketScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _kBrown.withValues(alpha: 0.08),
+                color: AppColors.brown900.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.shopping_cart_outlined,
-                color: _kBrown,
+                color: AppColors.brown900,
                 size: 22,
               ),
             ),
@@ -200,7 +109,7 @@ class _MarketScreenState extends State<MarketScreen> {
             style: GoogleFonts.cairo(
               fontSize: 22,
               fontWeight: FontWeight.w800,
-              color: _kBrown,
+              color: AppColors.brown900,
             ),
           ),
           GestureDetector(
@@ -209,10 +118,14 @@ class _MarketScreenState extends State<MarketScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: _kBrown.withValues(alpha: 0.08),
+                color: AppColors.brown900.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.menu_rounded, color: _kBrown, size: 22),
+              child: const Icon(
+                Icons.menu_rounded,
+                color: AppColors.brown900,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -233,7 +146,7 @@ class _MarketScreenState extends State<MarketScreen> {
           controller: _searchCtrl,
           textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
           onChanged: (v) => setState(() => _searchQuery = v),
-          style: GoogleFonts.cairo(fontSize: 14, color: _kBrown),
+          style: GoogleFonts.cairo(fontSize: 14, color: AppColors.brown900),
           decoration: InputDecoration(
             hintText: l.searchHint,
             hintStyle: GoogleFonts.cairo(
@@ -281,10 +194,12 @@ class _MarketScreenState extends State<MarketScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: isActive ? _kChipActive : Colors.white,
+                color: isActive ? AppColors.chipActive : Colors.white,
                 borderRadius: BorderRadius.circular(50),
                 border: Border.all(
-                  color: isActive ? _kChipActive : const Color(0xFFE0D8CE),
+                  color: isActive
+                      ? AppColors.chipActive
+                      : const Color(0xFFE0D8CE),
                 ),
               ),
               child: Text(
@@ -292,7 +207,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 style: GoogleFonts.cairo(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : _kBrown,
+                  color: isActive ? Colors.white : AppColors.brown900,
                 ),
               ),
             ),
@@ -327,7 +242,7 @@ class _MarketScreenState extends State<MarketScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF3B1F13), Color(0xFF6B3A1E)],
+                      colors: [AppColors.brown900, Color(0xFF6B3A1E)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -351,7 +266,7 @@ class _MarketScreenState extends State<MarketScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _kGold.withValues(alpha: 0.9),
+                      color: AppColors.gold.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -359,7 +274,7 @@ class _MarketScreenState extends State<MarketScreen> {
                       style: GoogleFonts.cairo(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: _kBrown,
+                        color: AppColors.brown900,
                       ),
                     ),
                   ),
@@ -402,7 +317,7 @@ class _MarketScreenState extends State<MarketScreen> {
             style: GoogleFonts.cairo(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: _kBrown,
+              color: AppColors.brown900,
             ),
           ),
           TextButton(
@@ -456,7 +371,7 @@ class _MarketScreenState extends State<MarketScreen> {
                     l.isArabic ? 'تمت الإضافة إلى السلة' : 'Added to cart',
                     style: GoogleFonts.cairo(),
                   ),
-                  backgroundColor: _kBrown700,
+                  backgroundColor: AppColors.brown700,
                   margin: const EdgeInsets.all(16),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
@@ -475,7 +390,7 @@ class _MarketScreenState extends State<MarketScreen> {
 
 // ── Product Card ──────────────────────────────────────────────────────────────
 class _ProductCard extends StatelessWidget {
-  final _Product product;
+  final Product product;
   final AppLocalizations l;
   final bool inCart;
   final VoidCallback onAddToCart;
@@ -491,11 +406,11 @@ class _ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _kCard,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: _kBrown.withValues(alpha: 0.07),
+            color: AppColors.brown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -539,7 +454,7 @@ class _ProductCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1B6B3A),
+                        color: AppColors.verifiedGreen,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -609,7 +524,7 @@ class _ProductCard extends StatelessWidget {
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
-                      color: _kBrown,
+                      color: AppColors.brown900,
                     ),
                   ),
                   // Rating
@@ -633,11 +548,15 @@ class _ProductCard extends StatelessWidget {
                         style: GoogleFonts.cairo(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: _kBrown,
+                          color: AppColors.brown900,
                         ),
                       ),
                       const SizedBox(width: 2),
-                      const Icon(Icons.star_rounded, color: _kGold, size: 14),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: AppColors.gold,
+                        size: 14,
+                      ),
                     ],
                   ),
                   // Price + Cart
@@ -651,7 +570,7 @@ class _ProductCard extends StatelessWidget {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: inCart ? _kGold : _kBrown,
+                            color: inCart ? AppColors.gold : AppColors.brown900,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -673,7 +592,7 @@ class _ProductCard extends StatelessWidget {
                             style: GoogleFonts.cairo(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: _kBrown,
+                              color: AppColors.brown900,
                             ),
                           ),
                           Text(

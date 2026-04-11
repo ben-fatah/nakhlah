@@ -2,82 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
-
-const Color _kBg = Color(0xFFF5F0EB);
-const Color _kBrown = Color(0xFF3B1F13);
-const Color _kGold = Color(0xFFE8B84B);
-const Color _kCard = Color(0xFFFFFFFF);
-const Color _kChipActive = Color(0xFF3B1F13);
-
-// ── Data model ───────────────────────────────────────────────────────────────
-class _DateVariety {
-  final String Function(AppLocalizations l) nameGetter;
-  final String Function(AppLocalizations l) originGetter;
-  final int kcal;
-  final double price;
-  final String imagePath;
-  final String tag; // matches filter chip key
-
-  const _DateVariety({
-    required this.nameGetter,
-    required this.originGetter,
-    required this.kcal,
-    required this.price,
-    required this.imagePath,
-    required this.tag,
-  });
-}
-
-final List<_DateVariety> _allVarieties = [
-  _DateVariety(
-    nameGetter: (l) => l.ajwaAlMadinah,
-    originGetter: (l) => l.originMadinah,
-    kcal: 280,
-    price: 24.00,
-    imagePath: 'assets/images/ajwa.png',
-    tag: 'ajwa',
-  ),
-  _DateVariety(
-    nameGetter: (l) => l.premiumMedjool,
-    originGetter: (l) => l.originJericho,
-    kcal: 277,
-    price: 18.50,
-    imagePath: 'assets/images/medjool.png',
-    tag: 'medjool',
-  ),
-  _DateVariety(
-    nameGetter: (l) => l.sukkariMofatall,
-    originGetter: (l) => l.originQassim,
-    kcal: 320,
-    price: 15.00,
-    imagePath: 'assets/images/sukari.png',
-    tag: 'sukkari',
-  ),
-  _DateVariety(
-    nameGetter: (l) => l.khalasAlAhsa,
-    originGetter: (l) => l.originAhsa,
-    kcal: 300,
-    price: 12.90,
-    imagePath: 'assets/images/khalas.png',
-    tag: 'khalas',
-  ),
-  _DateVariety(
-    nameGetter: (l) => l.barhiGolden,
-    originGetter: (l) => l.originQassim,
-    kcal: 265,
-    price: 20.00,
-    imagePath: 'assets/images/barhi.png',
-    tag: 'barhi',
-  ),
-  _DateVariety(
-    nameGetter: (l) => l.sagaiDates,
-    originGetter: (l) => l.originRiyadh,
-    kcal: 290,
-    price: 14.50,
-    imagePath: 'assets/images/sagai.png',
-    tag: 'sagai',
-  ),
-];
+import '../theme/app_colors.dart';
+import '../models/date_model.dart';
+import '../repositories/date_repository.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class ExploreScreen extends StatefulWidget {
@@ -93,6 +20,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   bool _isGrid = true;
 
   final _searchCtrl = TextEditingController();
+  final _dateRepo = DateRepository();
 
   List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
     {'key': 'all', 'label': l.allVarieties},
@@ -102,15 +30,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {'key': 'khalas', 'label': l.filterKhalas},
   ];
 
-  List<_DateVariety> _filtered(AppLocalizations l) {
-    return _allVarieties.where((v) {
-      final matchFilter = _selectedFilter == 'all' || v.tag == _selectedFilter;
-      final matchSearch =
-          _searchQuery.isEmpty ||
-          v.nameGetter(l).toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          v.originGetter(l).toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchFilter && matchSearch;
-    }).toList();
+  List<DateVariety> _filtered(AppLocalizations l) {
+    return _dateRepo.getFiltered(
+      l,
+      tag: _selectedFilter,
+      searchQuery: _searchQuery,
+    );
   }
 
   @override
@@ -123,7 +48,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppColors.screenBg,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -151,7 +76,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             style: GoogleFonts.cairo(
               fontSize: 26,
               fontWeight: FontWeight.w800,
-              color: _kBrown,
+              color: AppColors.brown900,
             ),
           ),
           GestureDetector(
@@ -159,12 +84,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _kBrown.withValues(alpha: 0.08),
+                color: AppColors.brown900.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 _isGrid ? Icons.grid_view_rounded : Icons.view_list_rounded,
-                color: _kBrown,
+                color: AppColors.brown900,
                 size: 22,
               ),
             ),
@@ -186,7 +111,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: TextField(
           controller: _searchCtrl,
           onChanged: (v) => setState(() => _searchQuery = v),
-          style: GoogleFonts.cairo(fontSize: 14, color: _kBrown),
+          style: GoogleFonts.cairo(fontSize: 14, color: AppColors.brown900),
           decoration: InputDecoration(
             hintText: l.searchHint,
             hintStyle: GoogleFonts.cairo(
@@ -231,10 +156,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: isActive ? _kChipActive : Colors.white,
+                color: isActive ? AppColors.chipActive : Colors.white,
                 borderRadius: BorderRadius.circular(50),
                 border: Border.all(
-                  color: isActive ? _kChipActive : const Color(0xFFE0D8CE),
+                  color: isActive
+                      ? AppColors.chipActive
+                      : const Color(0xFFE0D8CE),
                 ),
               ),
               child: Text(
@@ -242,7 +169,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 style: GoogleFonts.cairo(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isActive ? Colors.white : _kBrown,
+                  color: isActive ? Colors.white : AppColors.brown900,
                 ),
               ),
             ),
@@ -272,16 +199,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
         childAspectRatio: _isGrid ? 0.9 : 3.5,
       ),
       itemCount: items.length,
-      itemBuilder: (context, i) =>
-          _isGrid ? _GridCard(variety: items[i], l: l) : _ListCard(variety: items[i], l: l),
+      itemBuilder: (context, i) => _isGrid
+          ? _GridCard(variety: items[i], l: l)
+          : _ListCard(variety: items[i], l: l),
     );
   }
-
 }
 
 // ── Grid Card ─────────────────────────────────────────────────────────────────
 class _GridCard extends StatelessWidget {
-  final _DateVariety variety;
+  final DateVariety variety;
   final AppLocalizations l;
   const _GridCard({required this.variety, required this.l});
 
@@ -289,11 +216,11 @@ class _GridCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _kCard,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: _kBrown.withValues(alpha: 0.07),
+            color: AppColors.brown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -340,7 +267,7 @@ class _GridCard extends StatelessWidget {
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: _kBrown,
+                      color: AppColors.brown900,
                     ),
                   ),
                   Row(
@@ -373,7 +300,7 @@ class _GridCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: _kGold.withValues(alpha: 0.15),
+                          color: AppColors.gold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -381,7 +308,7 @@ class _GridCard extends StatelessWidget {
                           style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B6914),
+                            color: AppColors.goldDark,
                           ),
                         ),
                       ),
@@ -390,7 +317,7 @@ class _GridCard extends StatelessWidget {
                         style: GoogleFonts.cairo(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
-                          color: _kBrown,
+                          color: AppColors.brown900,
                         ),
                       ),
                     ],
@@ -407,7 +334,7 @@ class _GridCard extends StatelessWidget {
 
 // ── List Card ─────────────────────────────────────────────────────────────────
 class _ListCard extends StatelessWidget {
-  final _DateVariety variety;
+  final DateVariety variety;
   final AppLocalizations l;
   const _ListCard({required this.variety, required this.l});
 
@@ -415,11 +342,11 @@ class _ListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _kCard,
+        color: AppColors.cardWhite,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _kBrown.withValues(alpha: 0.06),
+            color: AppColors.brown900.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -459,7 +386,7 @@ class _ListCard extends StatelessWidget {
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
-                      color: _kBrown,
+                      color: AppColors.brown900,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -490,7 +417,7 @@ class _ListCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: _kGold.withValues(alpha: 0.15),
+                          color: AppColors.gold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -498,7 +425,7 @@ class _ListCard extends StatelessWidget {
                           style: GoogleFonts.cairo(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B6914),
+                            color: AppColors.goldDark,
                           ),
                         ),
                       ),
@@ -507,7 +434,7 @@ class _ListCard extends StatelessWidget {
                         style: GoogleFonts.cairo(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: _kBrown,
+                          color: AppColors.brown900,
                         ),
                       ),
                     ],
