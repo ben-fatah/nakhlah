@@ -17,11 +17,11 @@ class AuthService {
   /// Google session first, so the user can choose a different account.
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      print('[AuthService] signInWithGoogle called, kIsWeb: $kIsWeb');
+      debugPrint('[AuthService] signInWithGoogle called, kIsWeb: $kIsWeb');
       UserCredential userCredential;
 
       if (kIsWeb) {
-        print('[AuthService] Using web-based Google Auth');
+        debugPrint('[AuthService] Using web-based Google Auth');
         // ── Web: use Firebase Auth popup directly ──────────────────────
         final provider = GoogleAuthProvider();
         provider.addScope('email');
@@ -31,39 +31,39 @@ class AuthService {
         provider.setCustomParameters({'prompt': 'select_account'});
         userCredential = await _auth.signInWithPopup(provider);
       } else {
-        print('[AuthService] Using mobile GoogleSignIn SDK');
+        debugPrint('[AuthService] Using mobile GoogleSignIn SDK');
         // ── Mobile: use google_sign_in package ─────────────────────────
         // Sign out first so the account picker is always shown.
-        print('[AuthService] Signing out from cached Google session...');
+        debugPrint('[AuthService] Signing out from cached Google session...');
         await _googleSignIn.signOut();
 
-        print('[AuthService] Showing Google sign-in dialog...');
+        debugPrint('[AuthService] Showing Google sign-in dialog...');
         final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
-          print('[AuthService] User cancelled Google sign-in');
+          debugPrint('[AuthService] User cancelled Google sign-in');
           return null; // user cancelled
         }
 
-        print('[AuthService] Got Google user: ${googleUser.email}');
-        print('[AuthService] Getting Google authentication tokens...');
+        debugPrint('[AuthService] Got Google user: ${googleUser.email}');
+        debugPrint('[AuthService] Getting Google authentication tokens...');
         final GoogleSignInAuthentication googleAuth =
             await googleUser.authentication;
 
-        print('[AuthService] Creating Firebase credential...');
+        debugPrint('[AuthService] Creating Firebase credential...');
         final credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
 
-        print('[AuthService] Signing in to Firebase with credential...');
+        debugPrint('[AuthService] Signing in to Firebase with credential...');
         userCredential = await _auth.signInWithCredential(credential);
       }
 
       // Persist user profile in Firestore (merge to avoid overwriting)
       final user = userCredential.user;
-      print('[AuthService] Firebase sign-in successful: ${user?.email}');
+      debugPrint('[AuthService] Firebase sign-in successful: ${user?.email}');
       if (user != null) {
-        print('[AuthService] Saving user to Firestore...');
+        debugPrint('[AuthService] Saving user to Firestore...');
         try {
           await _firestore.collection('users').doc(user.uid).set({
             'fullName': user.displayName ?? '',
@@ -73,32 +73,32 @@ class AuthService {
             'lastSignIn': FieldValue.serverTimestamp(),
             'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-          print('[AuthService] User saved to Firestore');
+          debugPrint('[AuthService] User saved to Firestore');
         } catch (e) {
-          print('[AuthService] Error saving user to Firestore: $e');
+          debugPrint('[AuthService] Error saving user to Firestore: $e');
           // Don't rethrow, Firestore error shouldn't block sign-in
         }
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
-      print('[AuthService] FirebaseAuthException: ${e.code} - ${e.message}');
+      debugPrint('[AuthService] FirebaseAuthException: ${e.code} - ${e.message}');
       rethrow;
     } catch (e, st) {
-      print('[AuthService] Exception: $e');
-      print('[AuthService] StackTrace: $st');
+      debugPrint('[AuthService] Exception: $e');
+      debugPrint('[AuthService] StackTrace: $st');
 
       // Check for platform exception with API Exception 10
       if (e.toString().contains('PlatformException') &&
           e.toString().contains('10')) {
-        print(
+        debugPrint(
           '[AuthService] API Exception 10 detected - likely SHA-1 mismatch or missing Google Play Services',
         );
-        print(
+        debugPrint(
           '[AuthService] Fix: 1) Ensure Google Play Services is updated on device',
         );
-        print('[AuthService] Fix: 2) Get SHA-1 and add to Firebase Console');
-        print(
+        debugPrint('[AuthService] Fix: 2) Get SHA-1 and add to Firebase Console');
+        debugPrint(
           '[AuthService] Fix: 3) Run: cd android && ./gradlew signingReport',
         );
       }

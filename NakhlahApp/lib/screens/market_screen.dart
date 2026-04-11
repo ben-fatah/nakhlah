@@ -10,7 +10,6 @@ const Color _kBrown700 = Color(0xFF5C3A1E);
 const Color _kGold = Color(0xFFE8B84B);
 const Color _kCard = Color(0xFFFFFFFF);
 const Color _kChipActive = Color(0xFF3B1F13);
-const Color _kGreen = Color(0xFF2E7D32);
 
 // ── Data models ──────────────────────────────────────────────────────────────
 class _Product {
@@ -277,8 +276,9 @@ class _MarketScreenState extends State<MarketScreen> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: EdgeInsets.only(
-                  left: localeProvider.isArabic ? 10 : 0, 
-                  right: localeProvider.isArabic ? 0 : 10),
+                left: localeProvider.isArabic ? 10 : 0,
+                right: localeProvider.isArabic ? 0 : 10,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
                 color: isActive ? _kChipActive : Colors.white,
@@ -341,7 +341,9 @@ class _MarketScreenState extends State<MarketScreen> {
               right: localeProvider.isArabic ? 20 : null,
               left: localeProvider.isArabic ? null : 20,
               child: Column(
-                crossAxisAlignment: localeProvider.isArabic ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                crossAxisAlignment: localeProvider.isArabic
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -371,7 +373,9 @@ class _MarketScreenState extends State<MarketScreen> {
                     ),
                   ),
                   Text(
-                    l.isArabic ? 'قطاف الموسم الجديد من مزارع القصيم' : 'New season harvest from Qassim',
+                    l.isArabic
+                        ? 'قطاف الموسم الجديد من مزارع القصيم'
+                        : 'New season harvest from Qassim',
                     style: GoogleFonts.cairo(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.85),
@@ -467,7 +471,6 @@ class _MarketScreenState extends State<MarketScreen> {
       ),
     );
   }
-
 }
 
 // ── Product Card ──────────────────────────────────────────────────────────────
@@ -600,7 +603,9 @@ class _ProductCard extends StatelessWidget {
                     product.nameGetter(l),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: localeProvider.isArabic ? TextAlign.right : TextAlign.left,
+                    textAlign: localeProvider.isArabic
+                        ? TextAlign.right
+                        : TextAlign.left,
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -609,10 +614,14 @@ class _ProductCard extends StatelessWidget {
                   ),
                   // Rating
                   Row(
-                    mainAxisAlignment: localeProvider.isArabic ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    mainAxisAlignment: localeProvider.isArabic
+                        ? MainAxisAlignment.end
+                        : MainAxisAlignment.start,
                     children: [
                       Text(
-                        l.isArabic ? '(${product.reviews} تقييم)' : '(${product.reviews} reviews)',
+                        l.isArabic
+                            ? '(${product.reviews} تقييم)'
+                            : '(${product.reviews} reviews)',
                         style: GoogleFonts.cairo(
                           fontSize: 10,
                           color: Colors.grey.shade500,
@@ -658,9 +667,9 @@ class _ProductCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            l.isArabic 
-                              ? 'ر.س ${product.price.toStringAsFixed(0)}'
-                              : 'SAR ${product.price.toStringAsFixed(0)}',
+                            l.isArabic
+                                ? 'ر.س ${product.price.toStringAsFixed(0)}'
+                                : 'SAR ${product.price.toStringAsFixed(0)}',
                             style: GoogleFonts.cairo(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,

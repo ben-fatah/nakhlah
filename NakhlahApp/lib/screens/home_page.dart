@@ -163,7 +163,7 @@ class _HomeContentState extends State<_HomeContent>
     super.build(context); // required by AutomaticKeepAliveClientMixin
     final l = AppLocalizations.of(context);
     return SafeArea(
-      top: false,    // header handles its own top padding via MediaQuery
+      top: false, // header handles its own top padding via MediaQuery
       bottom: false, // bottom handled by Scaffold's BottomNavigationBar
       child: SingleChildScrollView(
         child: Column(
@@ -385,7 +385,7 @@ class _ScanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.08),
+            color: kBrown900.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -469,108 +469,6 @@ class _ScanCard extends StatelessWidget {
   }
 }
 
-// ── Quick Actions ─────────────────────────────────────────────────────────────
-class _QuickActions extends StatelessWidget {
-  final VoidCallback onScan, onExplore, onMarket, onProfile;
-  final String scanLabel, exploreLabel, marketLabel, historyLabel;
-
-  const _QuickActions({
-    required this.onScan,
-    required this.onExplore,
-    required this.onMarket,
-    required this.onProfile,
-    required this.scanLabel,
-    required this.exploreLabel,
-    required this.marketLabel,
-    required this.historyLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = [
-      _QuickAction(
-        icon: Icons.qr_code_scanner_rounded,
-        label: scanLabel,
-        onTap: onScan,
-      ),
-      _QuickAction(
-        icon: Icons.explore_outlined,
-        label: exploreLabel,
-        onTap: onExplore,
-      ),
-      _QuickAction(
-        icon: Icons.storefront_outlined,
-        label: marketLabel,
-        onTap: onMarket,
-      ),
-      _QuickAction(
-        icon: Icons.history_rounded,
-        label: historyLabel,
-        onTap: () {},
-      ),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: actions.map((a) => _QuickActionTile(action: a)).toList(),
-      ),
-    );
-  }
-}
-
-class _QuickActionTile extends StatelessWidget {
-  final _QuickAction action;
-  const _QuickActionTile({required this.action});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: action.onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: kBrown900.withOpacity(0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(action.icon, color: kBrown900, size: 26),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            action.label,
-            style: GoogleFonts.cairo(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: kBrown900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-}
-
 // ── Section Header ────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   final String title, actionLabel;
@@ -633,7 +531,7 @@ class _ScanCard2 extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.07),
+            color: kBrown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -680,7 +578,7 @@ class _ScanCard2 extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withOpacity(0.18),
+                    color: kGoldBadge.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -728,7 +626,7 @@ class _SellerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.07),
+            color: kBrown900.withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -760,7 +658,7 @@ class _SellerCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: kGoldBadge.withOpacity(0.15),
+                    color: kGoldBadge.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -845,7 +743,7 @@ class _BottomNav extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: kBrown900.withOpacity(0.08),
+            color: kBrown900.withValues(alpha: 0.08),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -885,7 +783,7 @@ class _BottomNav extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: kBrown900.withOpacity(0.4),
+                            color: kBrown900.withValues(alpha: 0.4),
                             blurRadius: 14,
                             offset: const Offset(0, 4),
                           ),

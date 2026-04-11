@@ -480,12 +480,14 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 final result =
                                     await AuthService.signInWithGoogle();
                                 if (result != null && mounted) {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (_) => const HomePage(),
-                                    ),
-                                    (_) => false,
-                                  );
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (_) => const HomePage(),
+                                      ),
+                                      (_) => false,
+                                    );
+                                  }
                                 }
                               } catch (e) {
                                 if (mounted) {
