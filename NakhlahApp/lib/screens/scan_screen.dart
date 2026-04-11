@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
+import 'scan_result_screen.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -195,12 +196,8 @@ class _ScanScreenState extends State<ScanScreen>
     if (!mounted) return;
     setState(() => _isAnalyzing = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('API hook ready — connect your model here!'),
-        backgroundColor: Color(0xFF5C3A1E),
-        margin: EdgeInsets.all(16),
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const DateDetailScreen()),
     );
   }
 

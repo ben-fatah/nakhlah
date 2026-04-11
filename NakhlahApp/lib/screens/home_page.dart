@@ -37,14 +37,6 @@ class _HomePageState extends State<HomePage> {
     4: 3, // Profile
   };
 
-  // Persistent screen instances — created once, kept alive by IndexedStack
-  final List<Widget> _stackScreens = const [
-    _HomeContent(), // index 0
-    ExploreScreen(), // index 1
-    market.MarketScreen(), // index 2
-    ManageProfileScreen(), // index 3
-  ];
-
   void _onNavTap(int navIndex) {
     // Scan tab (nav index 2) → push as modal to isolate camera lifecycle
     if (navIndex == 2) {
@@ -56,6 +48,15 @@ class _HomePageState extends State<HomePage> {
     final stackIdx = _navToStackIndex[navIndex];
     if (stackIdx != null) setState(() => _selectedIndex = navIndex);
   }
+
+  // Lazily built so _onNavTap is available as a reference.
+  // IndexedStack keeps all screens alive — state (scroll, data) is preserved.
+  List<Widget> get _stackScreens => [
+        const _HomeContent(), // index 0
+        const ExploreScreen(), // index 1
+        market.MarketScreen(onTabChange: _onNavTap), // index 2
+        const ManageProfileScreen(), // index 3
+      ];
 
   @override
   Widget build(BuildContext context) {

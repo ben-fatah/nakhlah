@@ -10,8 +10,11 @@ import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
+import '../providers/locale_provider.dart';
+import '../widgets/lang_toggle_button.dart';
 import 'sign_in_screen.dart';
 import 'home_page.dart';
+import 'auth/otp_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -28,6 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen>
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   bool _isLoading = false;
   bool _isGoogleLoading = false;
@@ -68,6 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+    _phoneCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -120,6 +125,71 @@ class _SignUpScreenState extends State<SignUpScreen>
       AppLogger.e('Unexpected sign-up error: $e', error: e, stackTrace: st);
       if (mounted) _showSnackBar('Something went wrong. Please try again.');
     } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Phone-first Sign-Up Logic ──────────────────────────────────
+  /// Creates the Firebase Auth account then pushes the OTP screen.
+  /// On OTP success the [onVerified] callback saves Firestore + navigates home.
+  Future<void> _signUpWithPhone() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Create email/password account first
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text.trim(),
+      );
+      await credential.user!.updateDisplayName(_nameCtrl.text.trim());
+      await credential.user!.reload();
+
+      // 2. Convert local phone to E.164
+      final rawPhone = _phoneCtrl.text.trim();
+      final e164 = rawPhone.startsWith('+') ? rawPhone : '+966${rawPhone.substring(1)}';
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      // 3. Push OTP screen; on success, persist user to Firestore
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => OtpVerificationScreen(
+            phoneNumber: e164,
+            onVerified: () async {
+              // Link phone credential to the new account & save to Firestore
+              try {
+                await _userRepo.saveUser(
+                  AppUser(
+                    uid: credential.user!.uid,
+                    fullName: _nameCtrl.text.trim(),
+                    email: _emailCtrl.text.trim(),
+                    phone: e164,
+                    provider: 'email',
+                  ),
+                );
+              } catch (e) {
+                AppLogger.e('[SignUp] Firestore save failed: $e');
+              }
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomePage()),
+                  (_) => false,
+                );
+              }
+            },
+          ),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      AppLogger.e('FirebaseAuthException — code: ${e.code}');
+      if (mounted) _showSnackBar(e.message ?? 'Sign-up failed (${e.code}).');
+      if (mounted) setState(() => _isLoading = false);
+    } catch (e, st) {
+      AppLogger.e('Unexpected sign-up error: $e', error: e, stackTrace: st);
+      if (mounted) _showSnackBar('Something went wrong. Please try again.');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -246,37 +316,50 @@ class _SignUpScreenState extends State<SignUpScreen>
   // ── UI ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgCream,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeIn,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 8),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: localeProvider,
+      builder: (context, locale, _) {
+        final isAr = locale.languageCode == 'ar';
+        return Directionality(
+          textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+          child: Scaffold(
+            backgroundColor: AppColors.bgCream,
+            body: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeIn,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 8),
 
-                  // ── Back Arrow ──────────────────────────────────────────
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const SignInScreen()),
-                      ),
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: AppColors.titleColor,
-                        size: 24,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                        // ── Back Arrow + Language toggle ──────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: () =>
+                                  Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) => const SignInScreen(),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: AppColors.titleColor,
+                                size: 24,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const LangToggleButton(),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
 
                   // ── Logo ────────────────────────────────────────────────
                   Center(
@@ -373,13 +456,24 @@ class _SignUpScreenState extends State<SignUpScreen>
                     validator: (v) =>
                         AppValidators.confirmPassword(v, _passwordCtrl.text),
                   ),
+                  const SizedBox(height: 18),
+
+                  // ── Phone Number ────────────────────────────────────────
+                  _buildField(
+                    label: 'Phone Number (Saudi)',
+                    hint: '05XXXXXXXX',
+                    icon: Icons.phone_outlined,
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    validator: AppValidators.phoneNumber,
+                  ),
                   const SizedBox(height: 32),
 
-                  // ── Sign Up Button ──────────────────────────────────────
+                  // ── Sign Up + OTP Button (primary) ──────────────────────
                   SizedBox(
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _signUp,
+                      onPressed: _isLoading ? null : _signUpWithPhone,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.buttonBg,
                         foregroundColor: Colors.white,
@@ -404,7 +498,33 @@ class _SignUpScreenState extends State<SignUpScreen>
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : Text(AppLocalizations.of(context).signUp),
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(AppLocalizations.of(context).signUp),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.verified_rounded, size: 18),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // ── Skip phone verification (fallback) ──────────────────
+                  Center(
+                    child: TextButton(
+                      onPressed: _isLoading ? null : _signUp,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.hintColor,
+                      ),
+                      child: Text(
+                        'Skip phone verification',
+                        style: GoogleFonts.cairo(
+                          fontSize: 13,
+                          color: AppColors.hintColor,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -599,6 +719,9 @@ class _SignUpScreenState extends State<SignUpScreen>
           ),
         ),
       ),
+    ),
+  );
+      },
     );
   }
 }

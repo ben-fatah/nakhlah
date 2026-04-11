@@ -9,7 +9,11 @@ import '../repositories/product_repository.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class MarketScreen extends StatefulWidget {
-  const MarketScreen({super.key});
+  /// Called when the screen wants to switch to another shell tab.
+  /// Pass the nav-bar index: 0=Home, 1=Explore, 3=Market, 4=Profile.
+  final ValueChanged<int>? onTabChange;
+
+  const MarketScreen({super.key, this.onTabChange});
 
   @override
   State<MarketScreen> createState() => _MarketScreenState();
@@ -89,7 +93,15 @@ class _MarketScreenState extends State<MarketScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
+            // Navigate back to Home tab via the shell callback.
+            // Falls back to Navigator.pop() if used outside the shell.
+            onTap: () {
+              if (widget.onTabChange != null) {
+                widget.onTabChange!(0);
+              } else {
+                Navigator.of(context).maybePop();
+              }
+            },
             child: Container(
               width: 40,
               height: 40,
@@ -98,7 +110,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
-                Icons.shopping_cart_outlined,
+                Icons.home_rounded,
                 color: AppColors.brown900,
                 size: 22,
               ),

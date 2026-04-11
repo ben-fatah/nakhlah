@@ -18,6 +18,11 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+
+  // Restore persisted locale before the app renders anything
+  final savedLocale = prefs.getString('app_locale');
+  if (savedLocale != null) localeProvider.setLocale(Locale(savedLocale));
+
   runApp(NakhlahApp(onboardingDone: onboardingDone));
 }
 

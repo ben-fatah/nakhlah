@@ -7,9 +7,12 @@ import '../core/logger.dart';
 import '../core/validators.dart';
 import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
+import '../widgets/lang_toggle_button.dart';
 import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
 import 'home_page.dart';
+import 'auth/otp_verification_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -24,10 +27,13 @@ class _SignInScreenState extends State<SignInScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isPhoneLoading = false;
   bool _obscure = true;
+  bool _showPhoneSection = false;
   String? _errorMsg;
 
   final _auth = FirebaseAuth.instance;
@@ -51,6 +57,7 @@ class _SignInScreenState extends State<SignInScreen>
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _phoneCtrl.dispose();
     _fadeCtrl.dispose();
     super.dispose();
   }
@@ -108,6 +115,33 @@ class _SignInScreenState extends State<SignInScreen>
       default:
         return 'Sign-in failed ($code).';
     }
+  }
+
+  // ── Phone Sign-In Logic ───────────────────────────────────────────────────
+  void _startPhoneSignIn() {
+    setState(() => _errorMsg = null);
+    final rawPhone = _phoneCtrl.text.trim();
+    final err = AppValidators.phoneNumber(rawPhone);
+    if (err != null) {
+      setState(() => _errorMsg = err);
+      return;
+    }
+
+    // Convert local Saudi format (05xxxxxxxx) to E.164 (+966xxxxxxxxx)
+    final e164 = '+966${rawPhone.substring(1)}';
+
+    setState(() => _isPhoneLoading = true);
+
+    // Navigate to OTP screen — it handles sending & verifying
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(phoneNumber: e164),
+          ),
+        )
+        .then((_) {
+          if (mounted) setState(() => _isPhoneLoading = false);
+        });
   }
 
   // ── Reusable field builder (matching sign-up style) ───────────────────────
@@ -195,35 +229,49 @@ class _SignInScreenState extends State<SignInScreen>
   // ── UI ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgCream,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeIn,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 40),
+    return ValueListenableBuilder<Locale>(
+      valueListenable: localeProvider,
+      builder: (context, locale, _) {
+        final isAr = locale.languageCode == 'ar';
+        return Directionality(
+          textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+          child: Scaffold(
+            backgroundColor: AppColors.bgCream,
+            body: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeIn,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 14),
 
-                  // ── Logo ──────────────────────────────────────────────
-                  Center(
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.eco_rounded,
-                        size: 56,
-                        color: AppColors.palmGreen,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                        // ── Language toggle ───────────────────────────────
+                        const Align(
+                          alignment: Alignment.centerRight,
+                          child: LangToggleButton(),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // ── Logo ──────────────────────────────────────────
+                        Center(
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => const Icon(
+                              Icons.eco_rounded,
+                              size: 56,
+                              color: AppColors.palmGreen,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
 
                   // ── Title ─────────────────────────────────────────────
                   Text(
@@ -507,6 +555,148 @@ class _SignInScreenState extends State<SignInScreen>
                   ),
                   const SizedBox(height: 24),
 
+                  // ── OR Phone Divider ──────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'OR',
+                          style: GoogleFonts.cairo(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.hintColor,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: AppColors.fieldBorder,
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Phone Sign-In toggle ──────────────────────────────
+                  GestureDetector(
+                    onTap: () => setState(
+                      () => _showPhoneSection = !_showPhoneSection,
+                    ),
+                    child: Container(
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: AppColors.fieldBg,
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: _showPhoneSection
+                              ? AppColors.brown700
+                              : AppColors.fieldBorder,
+                          width: _showPhoneSection ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 20,
+                            color: _showPhoneSection
+                                ? AppColors.brown700
+                                : AppColors.fieldIcon,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Continue with Phone',
+                            style: GoogleFonts.cairo(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: _showPhoneSection
+                                  ? AppColors.brown700
+                                  : AppColors.titleColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          AnimatedRotation(
+                            duration: const Duration(milliseconds: 200),
+                            turns: _showPhoneSection ? 0.5 : 0,
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: _showPhoneSection
+                                  ? AppColors.brown700
+                                  : AppColors.fieldIcon,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Collapsible phone field + OTP button ──────────────
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: _showPhoneSection
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 16),
+                              _buildField(
+                                label: 'Phone Number',
+                                hint: '05XXXXXXXX',
+                                icon: Icons.phone_outlined,
+                                controller: _phoneCtrl,
+                                keyboardType: TextInputType.phone,
+                                validator: AppValidators.phoneNumber,
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                height: 54,
+                                child: ElevatedButton(
+                                  onPressed: _isPhoneLoading
+                                      ? null
+                                      : _startPhoneSignIn,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.brown700,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor:
+                                        AppColors.brown700.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                    elevation: 0,
+                                    textStyle: GoogleFonts.cairo(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  child: _isPhoneLoading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : const Text('Send OTP'),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 24),
+
                   // ── Switch to Sign Up ─────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -537,13 +727,16 @@ class _SignInScreenState extends State<SignInScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                ],
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

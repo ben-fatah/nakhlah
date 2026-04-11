@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(
-    const MaterialApp(
-      home: DateDetailScreen(),
-      debugShowCheckedModeBanner: false,
-    ),
-  );
-}
-
 class DateDetailScreen extends StatelessWidget {
   const DateDetailScreen({super.key});
 
@@ -21,7 +12,10 @@ class DateDetailScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const Icon(Icons.arrow_back, color: Colors.black87),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           'Scan Result',
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
@@ -213,36 +207,6 @@ class DateDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
-    );
-  }
-
-  // Custom Bottom Navigation Bar
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF5D4037),
-      unselectedItemColor: Colors.grey,
-      currentIndex: 2, // 'Scan' selected
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Home"),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.explore_outlined),
-          label: "Explore",
-        ),
-        BottomNavigationBarItem(
-          icon: CircleAvatar(
-            backgroundColor: Color(0xFF5D4037),
-            child: Icon(Icons.document_scanner, color: Colors.white),
-          ),
-          label: "Scan",
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.storefront), label: "Market"),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: "Profile",
-        ),
-      ],
     );
   }
 }

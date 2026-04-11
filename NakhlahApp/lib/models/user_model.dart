@@ -9,6 +9,7 @@ class AppUser {
   final String email;
   final String photoUrl;
   final String provider;
+  final String phone;
   final DateTime? lastSignIn;
   final DateTime? createdAt;
 
@@ -18,6 +19,7 @@ class AppUser {
     required this.email,
     this.photoUrl = '',
     this.provider = 'email',
+    this.phone = '',
     this.lastSignIn,
     this.createdAt,
   });
@@ -31,6 +33,7 @@ class AppUser {
       email: data['email'] as String? ?? '',
       photoUrl: data['photoUrl'] as String? ?? '',
       provider: data['provider'] as String? ?? 'email',
+      phone: data['phone'] as String? ?? '',
       lastSignIn: (data['lastSignIn'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -46,6 +49,7 @@ class AppUser {
       'email': email,
       'photoUrl': photoUrl,
       'provider': provider,
+      'phone': phone,
       'lastSignIn': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -58,6 +62,7 @@ class AppUser {
     String? email,
     String? photoUrl,
     String? provider,
+    String? phone,
     DateTime? lastSignIn,
     DateTime? createdAt,
   }) {
@@ -67,6 +72,7 @@ class AppUser {
       email: email ?? this.email,
       photoUrl: photoUrl ?? this.photoUrl,
       provider: provider ?? this.provider,
+      phone: phone ?? this.phone,
       lastSignIn: lastSignIn ?? this.lastSignIn,
       createdAt: createdAt ?? this.createdAt,
     );
