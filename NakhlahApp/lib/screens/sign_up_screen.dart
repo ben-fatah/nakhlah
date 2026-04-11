@@ -392,7 +392,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                   // ── Full Name ───────────────────────────────────────────
                   _buildField(
                     label: AppLocalizations.of(context).fullName,
-                    hint: 'Ali Al-Otaibi',
+                    hint: AppLocalizations.of(context).namePlaceholder,
                     icon: Icons.person_outline_rounded,
                     controller: _nameCtrl,
                     textCapitalization: TextCapitalization.words,
@@ -435,20 +435,26 @@ class _SignUpScreenState extends State<SignUpScreen>
                   // ── Password requirements checklist ─────────────────────
                   if (_passwordTouched) ...[
                     const SizedBox(height: 10),
-                    _buildRequirement('At least 8 characters', _hasMinLength),
+                    _buildRequirement(
+                      AppLocalizations.of(context).reqMinLength,
+                      _hasMinLength,
+                    ),
                     const SizedBox(height: 4),
                     _buildRequirement(
-                      'At least one capital letter',
+                      AppLocalizations.of(context).reqUppercase,
                       _hasUppercase,
                     ),
                     const SizedBox(height: 4),
-                    _buildRequirement('At least one number', _hasNumber),
+                    _buildRequirement(
+                      AppLocalizations.of(context).reqNumber,
+                      _hasNumber,
+                    ),
                   ],
                   const SizedBox(height: 18),
 
                   // ── Confirm Password ────────────────────────────────────
                   _buildField(
-                    label: 'Confirm Password',
+                    label: AppLocalizations.of(context).confirmPassword,
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
                     controller: _confirmPasswordCtrl,
@@ -460,7 +466,7 @@ class _SignUpScreenState extends State<SignUpScreen>
 
                   // ── Phone Number ────────────────────────────────────────
                   _buildField(
-                    label: 'Phone Number (Saudi)',
+                    label: AppLocalizations.of(context).phoneSaudi,
                     hint: '05XXXXXXXX',
                     icon: Icons.phone_outlined,
                     controller: _phoneCtrl,
@@ -518,7 +524,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                         foregroundColor: AppColors.hintColor,
                       ),
                       child: Text(
-                        'Skip phone verification',
+                        AppLocalizations.of(context).skipPhoneVerification,
                         style: GoogleFonts.cairo(
                           fontSize: 13,
                           color: AppColors.hintColor,
@@ -541,7 +547,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'OR',
+                          AppLocalizations.of(context).orDivider,
                           style: GoogleFonts.cairo(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -652,11 +658,11 @@ class _SignUpScreenState extends State<SignUpScreen>
                           height: 1.5,
                         ),
                         children: [
-                          const TextSpan(
-                            text: 'By signing up, you agree to our ',
+                          TextSpan(
+                            text: AppLocalizations.of(context).bySigningUp,
                           ),
                           TextSpan(
-                            text: 'Terms of Service',
+                            text: AppLocalizations.of(context).termsOfService,
                             style: GoogleFonts.cairo(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -665,9 +671,11 @@ class _SignUpScreenState extends State<SignUpScreen>
                             ),
                             recognizer: TapGestureRecognizer()..onTap = () {},
                           ),
-                          const TextSpan(text: ' and '),
                           TextSpan(
-                            text: 'Privacy\nPolicy',
+                            text: AppLocalizations.of(context).andWord,
+                          ),
+                          TextSpan(
+                            text: AppLocalizations.of(context).privacyPolicy,
                             style: GoogleFonts.cairo(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,

@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../repositories/onboarding_repository.dart';
+import '../theme/app_colors.dart';
+import '../l10n/app_localizations.dart';
+import 'home_page.dart';
 import 'sign_in_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  /// Optionally inject a pre-built repository (useful in tests).
+  final OnboardingRepository? repository;
+  const OnboardingScreen({super.key, this.repository});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+  late final OnboardingRepository _repo;
   final PageController _controller = PageController();
   int _currentPage = 0;
+  bool _isLoading = false;
 
   final List<_OnboardingData> _pages = [
     _OnboardingData(
@@ -25,7 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Get Nutritional Info',
       description:
           'Instantly view detailed nutritional data for every date variety you scan.',
-      imagePath: 'assets/images/palm_grove_header.png',
+      imagePath: 'assets/images/nutritional.png',
     ),
     _OnboardingData(
       title: 'Explore Varieties',
@@ -35,13 +43,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    // Use injected repo (for testing) or create a synchronous-safe one.
+    // At runtime OnboardingRepository is pre-created in main() and passed in.
+    _repo = widget.repository ?? OnboardingRepository();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _finishOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen()));
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      // Delegate ALL SharedPreferences + Firebase logic to the repository
+      final goHome = await _repo.finishOnboarding();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => goHome ? const HomePage() : const SignInScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _next() {
@@ -57,23 +87,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
+      backgroundColor: AppColors.offWhite,
       body: SafeArea(
         child: Column(
           children: [
-            // ── Top row: logo left, skip right ──────────────────────────
+            // ── Top row: skip button ────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: _finishOnboarding,
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(
-                        color: Color(0xFF7D5A3C),
+                    onPressed: _isLoading ? null : _finishOnboarding,
+                    child: Text(
+                      l.skip,
+                      style: GoogleFonts.cairo(
+                        color: AppColors.brown700,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -122,22 +153,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: double.infinity,
                 height: 58,
                 child: ElevatedButton(
-                  onPressed: _next,
+                  onPressed: _isLoading ? null : _next,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF5C3D1E),
+                    backgroundColor: AppColors.brown700,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        AppColors.brown700.withValues(alpha: 0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(32),
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Text(
+                          _currentPage == _pages.length - 1
+                              ? l.getStarted
+                              : l.next,
+                          style: GoogleFonts.cairo(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ),

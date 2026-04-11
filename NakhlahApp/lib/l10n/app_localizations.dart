@@ -18,6 +18,7 @@ class AppLocalizations {
   String get createAccount => isArabic ? 'إنشاء حساب' : 'CREATE ACCOUNT';
   String get email => isArabic ? 'البريد الإلكتروني' : 'Email';
   String get password => isArabic ? 'كلمة المرور' : 'Password';
+  String get confirmPassword => isArabic ? 'تأكيد كلمة المرور' : 'Confirm Password';
   String get signIn => isArabic ? 'تسجيل الدخول' : 'Sign In';
   String get signUp => isArabic ? 'إنشاء حساب' : 'Sign Up';
   String get forgotPassword =>
@@ -28,6 +29,31 @@ class AppLocalizations {
       isArabic ? 'ليس لديك حساب؟ ' : "Don't have an account? ";
   String get alreadyAccount =>
       isArabic ? 'لديك حساب بالفعل؟ ' : 'Already have an account? ';
+
+  // ── Sign-Up specifics ────────────────────────────────────────────────────
+  String get namePlaceholder => isArabic ? 'علي العتيبي' : 'Ali Al-Otaibi';
+  String get emailPlaceholder => isArabic ? 'example@mail.com' : 'example@mail.com';
+  String get phoneSaudi => isArabic ? 'رقم الجوال (سعودي)' : 'Phone Number (Saudi)';
+  String get skipPhoneVerification =>
+      isArabic ? 'تخطى التحقق من الجوال' : 'Skip phone verification';
+  String get orDivider => isArabic ? 'أو' : 'OR';
+  String get bySigningUp => isArabic
+      ? 'بالتسجيل، أنت توافق على '
+      : 'By signing up, you agree to our ';
+  String get termsOfService => isArabic ? 'شروط الخدمة' : 'Terms of Service';
+  String get andWord => isArabic ? ' و ' : ' and ';
+  String get privacyPolicy => isArabic ? 'سياسة الخصوصية' : 'Privacy\nPolicy';
+
+  // ── Password requirements ────────────────────────────────────────────────
+  String get reqMinLength => isArabic ? '8 أحرف على الأقل' : 'At least 8 characters';
+  String get reqUppercase => isArabic ? 'حرف كبير واحد على الأقل' : 'At least one capital letter';
+  String get reqNumber => isArabic ? 'رقم واحد على الأقل' : 'At least one number';
+
+
+  // ── Onboarding ─────────────────────────────────────────────────────
+  String get skip => isArabic ? 'تخطى' : 'Skip';
+  String get next => isArabic ? 'التالي' : 'Next';
+  String get getStarted => isArabic ? 'ابدأ الآن' : 'Get Started';
 
   // ── Home ────────────────────────────────────────────────────────────────
   String get scanDates => isArabic ? 'مسح التمر' : 'Scan Dates';
@@ -54,6 +80,8 @@ class AppLocalizations {
       isArabic ? 'تعديل المعلومات' : 'Edit Information';
   String get fullName => isArabic ? 'الاسم الكامل' : 'Full Name';
   String get emailAddress => isArabic ? 'البريد الإلكتروني' : 'Email Address';
+  String get phoneNumber => isArabic ? 'رقم الهاتف' : 'Phone Number';
+  String get phoneHint => isArabic ? '05xxxxxxxx' : '05xxxxxxxx';
   String get saveUpdates => isArabic ? 'حفظ التغييرات' : 'Save Updates';
   String get saving => isArabic ? 'جارٍ الحفظ...' : 'Saving...';
   String get myJourney => isArabic ? 'رحلتي' : 'My Journey';

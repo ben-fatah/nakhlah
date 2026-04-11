@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
+import 'repositories/onboarding_repository.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'screens/sign_in_screen.dart';
@@ -16,19 +16,25 @@ import 'screens/onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  final prefs = await SharedPreferences.getInstance();
-  final onboardingDone = prefs.getBool('onboarding_done') ?? false;
+
+  // OnboardingRepository loads SharedPreferences once — no duplicate instances
+  final onboardingRepo = await OnboardingRepository.create();
 
   // Restore persisted locale before the app renders anything
-  final savedLocale = prefs.getString('app_locale');
-  if (savedLocale != null) localeProvider.setLocale(Locale(savedLocale));
+  if (onboardingRepo.savedLocale != null) {
+    localeProvider.setLocale(Locale(onboardingRepo.savedLocale!));
+  }
 
-  runApp(NakhlahApp(onboardingDone: onboardingDone));
+  runApp(
+    NakhlahApp(
+      onboardingRepo: onboardingRepo,
+    ),
+  );
 }
 
 class NakhlahApp extends StatelessWidget {
-  final bool onboardingDone;
-  const NakhlahApp({super.key, required this.onboardingDone});
+  final OnboardingRepository onboardingRepo;
+  const NakhlahApp({super.key, required this.onboardingRepo});
 
   @override
   Widget build(BuildContext context) {
@@ -52,9 +58,9 @@ class NakhlahApp extends StatelessWidget {
           // ── Global Theme ──────────────────────────────────────────────
           theme: AppTheme.light(context),
 
-          // ── Auth-Gated Root ───────────────────────────────────────────
-          home: !onboardingDone
-              ? const OnboardingScreen()
+          // ── Auth-Gated Root ───────────────────────────────────────
+          home: !onboardingRepo.isOnboardingDone
+              ? OnboardingScreen(repository: onboardingRepo)
               : StreamBuilder<User?>(
                   stream: FirebaseAuth.instance.authStateChanges(),
                   builder: (context, snapshot) {

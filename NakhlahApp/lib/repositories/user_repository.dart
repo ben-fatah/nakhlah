@@ -40,9 +40,40 @@ class UserRepository {
   }
 
   /// Partial update — merges [data] into the existing document.
+  ///
+  /// Also syncs [fullName] → Firebase Auth `displayName` when present.
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
     await _usersRef.doc(uid).set(data, SetOptions(merge: true));
+
+    // Keep Firebase Auth displayName in sync
+    if (data.containsKey('fullName')) {
+      final user = _auth.currentUser;
+      if (user != null && user.uid == uid) {
+        final newName = data['fullName'] as String?;
+        if (newName != null && newName.isNotEmpty) {
+          await user.updateDisplayName(newName);
+        }
+      }
+    }
+  }
+
+  /// Real-time stream of the current authenticated user's Firestore profile.
+  ///
+  /// Emits `null` when not signed in or document does not exist.
+  Stream<AppUser?> watchCurrentUser() {
+    return _auth.authStateChanges().asyncExpand((user) {
+      if (user == null) return Stream.value(null);
+      return watchUser(user.uid);
+    });
+  }
+
+  /// Real-time stream of a user's Firestore profile by [uid].
+  Stream<AppUser?> watchUser(String uid) {
+    return _usersRef.doc(uid).snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return AppUser.fromFirestore(snap);
+    });
   }
 
   /// Resolve the user's first name from Firebase Auth or Firestore.

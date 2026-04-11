@@ -58,17 +58,28 @@ class _ScanScreenState extends State<ScanScreen>
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
 
-      _cameraController = CameraController(
+      final controller = CameraController(
         cameras.first,
         ResolutionPreset.high,
         enableAudio: false,
       );
 
-      await _cameraController!.initialize();
+      // Assign before initialize so dispose() can always clean it up
+      _cameraController = controller;
 
-      if (!mounted) return;
+      await controller.initialize();
+
+      if (!mounted) {
+        // Widget was disposed during async gap — release immediately
+        await controller.dispose();
+        _cameraController = null;
+        return;
+      }
       setState(() => _isCameraInitialized = true);
     } catch (e) {
+      // If initialize() threw, the controller may still hold resources
+      await _cameraController?.dispose();
+      _cameraController = null;
       if (mounted) {
         ScaffoldMessenger.of(
           context,

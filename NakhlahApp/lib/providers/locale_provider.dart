@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LocaleProvider extends ValueNotifier<Locale> {
   static const _key = 'app_locale';
 
-  LocaleProvider._internal(Locale initial) : super(initial);
+  LocaleProvider._internal(super.initial);
 
   /// Loads the persisted locale from SharedPreferences.
   /// Falls back to English if no preference has been saved.

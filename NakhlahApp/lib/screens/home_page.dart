@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'manage_profile_screen.dart';
@@ -11,6 +13,7 @@ import '../widgets/app_bottom_nav_bar.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/seller_repository.dart';
 import '../models/seller_model.dart';
+import '../models/user_model.dart';
 
 // ── IndexedStack tab indices ──────────────────────────────────────────────────
 // 0 = Home, 1 = Explore, 2 = Market, 3 = Profile
@@ -111,17 +114,59 @@ class _HomeContentState extends State<_HomeContent>
 
   late final List<Seller> _sellers;
   String _firstName = '';
+  StreamSubscription<AppUser?>? _userSub;
 
   @override
   void initState() {
     super.initState();
     _sellers = _sellerRepo.getFeatured();
-    _loadUserName();
+    _subscribeToUser();
   }
 
-  Future<void> _loadUserName() async {
-    final name = await _userRepo.resolveFirstName();
-    if (mounted) setState(() => _firstName = name);
+  /// Subscribes to the Firestore user document stream.
+  ///
+  /// Resolution order (first non-empty wins):
+  ///   1. Firestore `fullName` (first word)
+  ///   2. Firebase Auth `displayName` (first word)
+  ///   3. email prefix before `@`
+  ///
+  /// Both the initial value and every subsequent Firestore write arrive
+  /// through this single listener — no double read, no polling.
+  void _subscribeToUser() {
+    _userSub = _userRepo.watchCurrentUser().listen((appUser) {
+      if (!mounted) return;
+      String name = '';
+
+      // 1) Firestore fullName
+      final fullName = appUser?.fullName.trim() ?? '';
+      if (fullName.isNotEmpty) {
+        name = fullName.split(' ').first;
+      }
+
+      // 2) Firebase Auth displayName
+      if (name.isEmpty) {
+        final displayName =
+            FirebaseAuth.instance.currentUser?.displayName?.trim() ?? '';
+        if (displayName.isNotEmpty) name = displayName.split(' ').first;
+      }
+
+      // 3) Email prefix
+      if (name.isEmpty) {
+        final email =
+            appUser?.email.trim() ??
+            FirebaseAuth.instance.currentUser?.email ??
+            '';
+        if (email.isNotEmpty) name = email.split('@').first;
+      }
+
+      setState(() => _firstName = name);
+    });
+  }
+
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    super.dispose();
   }
 
   @override

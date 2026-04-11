@@ -21,6 +21,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   bool _isLoading = false;
   bool _isFetching = true;
@@ -39,6 +40,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -55,6 +57,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         _emailCtrl.text = appUser.email.isNotEmpty
             ? appUser.email
             : user.email ?? '';
+        _phoneCtrl.text = appUser.phone;
         _photoUrl = appUser.photoUrl.isNotEmpty
             ? appUser.photoUrl
             : user.photoURL ?? '';
@@ -78,6 +81,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       await _userRepo.updateUser(user.uid, {
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
       });
       if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
     } catch (e) {
@@ -189,6 +193,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     final email = _emailCtrl.text.trim().isNotEmpty
         ? _emailCtrl.text.trim()
         : _auth.currentUser?.email ?? '';
+    final phone = _phoneCtrl.text.trim();
 
     return Container(
       width: double.infinity,
@@ -213,8 +218,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                // Only show back button when this screen was pushed as a route
-                // (not when accessed via IndexedStack tab — pop() would do nothing)
                 if (Navigator.canPop(context))
                   IconButton(
                     icon: const Icon(
@@ -306,6 +309,28 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
+          // ── Phone number subtitle ──────────────────────────────────────
+          if (phone.isNotEmpty) ...[  
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.phone_outlined,
+                  size: 13,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  phone,
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -347,6 +372,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
+          // ── Full Name ────────────────────────────────────────────────
           TextFormField(
             controller: _nameCtrl,
             textCapitalization: TextCapitalization.words,
@@ -357,6 +383,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             validator: AppValidators.fullName,
           ),
           const SizedBox(height: 16),
+          // ── Email ────────────────────────────────────────────────────
           TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
@@ -365,6 +392,22 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               prefixIcon: const Icon(Icons.email_outlined),
             ),
             validator: AppValidators.email,
+          ),
+          const SizedBox(height: 16),
+          // ── Phone Number ─────────────────────────────────────────────
+          TextFormField(
+            controller: _phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: l.phoneNumber,
+              hintText: l.phoneHint,
+              prefixIcon: const Icon(Icons.phone_outlined),
+            ),
+            // Phone is optional — only validate when a value is entered
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null;
+              return AppValidators.phoneNumber(v);
+            },
           ),
           const SizedBox(height: 24),
           SizedBox(
