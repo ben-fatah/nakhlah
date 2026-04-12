@@ -25,6 +25,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 >>>>>>> 002b4c0 (fix: resolve navigation issues and improve UI consistency across home, explore, and market screens)
 
+
     // Bypasses the SharedPreferences singleton and FirebaseAuth entirely —
     // onboarding_done=false routes to OnboardingScreen, not the auth stream.
     final repo = OnboardingRepository(prefs: prefs);

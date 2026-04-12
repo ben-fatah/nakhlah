@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: nakhlah-ai
+    runtime: python
+
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: API_KEY
+        generateValue: true
+
+      - key: MODEL_PATH
+        value: models/nakhlah_v2.onnx
+
+      - key: DEVICE
+        value: cpu
+
+      - key: WARMUP_ON_STARTUP
+        value: "true"

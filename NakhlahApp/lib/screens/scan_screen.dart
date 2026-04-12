@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../models/scan_result.dart';
 import 'scan_result_screen.dart';
+import '../services/scan_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -184,49 +185,59 @@ class _ScanScreenState extends State<ScanScreen>
   Future<void> _analyzeImage(File image) async {
     setState(() => _isAnalyzing = true);
 
-    // ── TODO: Replace with real API call ──────────────────────────────────
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Call the real API
+      final apiResult = await ScanService.classify(image);
 
-    const result = ScanResult(
-      nameEn: 'Medjool Date',
-      nameAr: 'تمر المجدول',
-      originEn: 'Al Madinah, Saudi Arabia',
-      originAr: 'المدينة المنورة، السعودية',
-      confidence: 0.98,
-      calories: 277,
-      carbs: 75,
-      fiber: 7,
-      potassium: 696,
-      imageUrl:
-          'https://images.unsplash.com/photo-1590004953392-5aba2e72269a?w=800',
-    );
-    // ─────────────────────────────────────────────────────────────────────
+      if (!mounted) return;
 
-    if (!mounted) return;
-    setState(() => _isAnalyzing = false);
+      // Map API response → existing ScanResult model (no screen changes needed)
+      final result = ScanResult(
+        nameEn: apiResult.label,
+        nameAr: apiResult.nameAr,
+        originEn: apiResult.originEn,
+        originAr: apiResult.originAr,
+        confidence: apiResult.confidence,
+        calories: apiResult.calories,
+        carbs: apiResult.carbs,
+        fiber: apiResult.fiber,
+        potassium: apiResult.potassium,
+      );
 
-    // ── Save to scan history ──────────────────────────────────────────────
-    scanHistoryNotifier.add(
-      ScanHistoryEntry(
-        id: _uuid.v4(),
-        nameEn: result.nameEn,
-        nameAr: result.nameAr,
-        originEn: result.originEn,
-        originAr: result.originAr,
-        confidence: result.confidence,
-        calories: result.calories,
-        carbs: result.carbs,
-        fiber: result.fiber,
-        potassium: result.potassium,
-        imageUrl: result.imageUrl,
-        imagePath: 'assets/images/medjool.png',
-        scannedAt: DateTime.now(),
-      ),
-    );
+      // Save to local history
+      scanHistoryNotifier.add(
+        ScanHistoryEntry(
+          id: _uuid.v4(),
+          nameEn: result.nameEn,
+          nameAr: result.nameAr,
+          originEn: result.originEn,
+          originAr: result.originAr,
+          confidence: result.confidence,
+          calories: result.calories,
+          carbs: result.carbs,
+          fiber: result.fiber,
+          potassium: result.potassium,
+          imagePath:
+              'assets/images/${result.nameEn.toLowerCase().replaceAll(' ', '_')}.png',
+          scannedAt: DateTime.now(),
+        ),
+      );
 
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)));
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
+      );
+    } on ScanServiceException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isAnalyzing = false);
+    }
   }
 
   @override
