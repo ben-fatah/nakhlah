@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:uuid/uuid.dart';
 
+import '../domain/scan_history_notifier.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../models/scan_result.dart';
@@ -22,14 +24,13 @@ class _ScanScreenState extends State<ScanScreen>
   bool _flashOn = false;
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
-
-  // Picked image from gallery
   File? _pickedImage;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
   final _picker = ImagePicker();
+  final _uuid = const Uuid();
 
   @override
   void initState() {
@@ -64,21 +65,16 @@ class _ScanScreenState extends State<ScanScreen>
         ResolutionPreset.high,
         enableAudio: false,
       );
-
-      // Assign before initialize so dispose() can always clean it up
       _cameraController = controller;
-
       await controller.initialize();
 
       if (!mounted) {
-        // Widget was disposed during async gap — release immediately
         await controller.dispose();
         _cameraController = null;
         return;
       }
       setState(() => _isCameraInitialized = true);
     } catch (e) {
-      // If initialize() threw, the controller may still hold resources
       await _cameraController?.dispose();
       _cameraController = null;
       if (mounted) {
@@ -89,15 +85,10 @@ class _ScanScreenState extends State<ScanScreen>
     }
   }
 
-  // ── Gallery Picker ────────────────────────────────────────────────────────
   Future<void> _pickFromGallery() async {
     try {
-      // Request photos permission (Android 13+ uses READ_MEDIA_IMAGES)
       PermissionStatus status = await Permission.photos.request();
-      // Fallback for older Android
-      if (!status.isGranted) {
-        status = await Permission.storage.request();
-      }
+      if (!status.isGranted) status = await Permission.storage.request();
 
       if (status.isPermanentlyDenied) {
         if (mounted) {
@@ -106,7 +97,7 @@ class _ScanScreenState extends State<ScanScreen>
             builder: (_) => AlertDialog(
               title: const Text('Permission Required'),
               content: const Text(
-                'Gallery access was permanently denied. Please enable it in Settings to pick images.',
+                'Gallery access was permanently denied. Please enable it in Settings.',
               ),
               actions: [
                 TextButton(
@@ -144,8 +135,7 @@ class _ScanScreenState extends State<ScanScreen>
         imageQuality: 85,
         maxWidth: 1080,
       );
-
-      if (picked == null) return; // user cancelled
+      if (picked == null) return;
 
       setState(() {
         _pickedImage = File(picked.path);
@@ -174,13 +164,10 @@ class _ScanScreenState extends State<ScanScreen>
     }
   }
 
-  // ── Capture / Analyze ─────────────────────────────────────────────────────
   Future<void> _onCaptureTap() async {
     if (_pickedImage != null) {
-      // Image from gallery — send to API
       await _analyzeImage(_pickedImage!);
     } else if (_isCameraInitialized && _cameraController != null) {
-      // Live camera capture
       try {
         final XFile photo = await _cameraController!.takePicture();
         await _analyzeImage(File(photo.path));
@@ -197,17 +184,9 @@ class _ScanScreenState extends State<ScanScreen>
   Future<void> _analyzeImage(File image) async {
     setState(() => _isAnalyzing = true);
 
-    // ── TODO: Replace the mock below with your real API call ─────────────
-    // Example:
-    //   final response = await YourApiService.classifyDate(image);
-    //   final result = ScanResult(
-    //     nameEn: response.nameEn,
-    //     nameAr: response.nameAr,
-    //     ... etc
-    //   );
+    // ── TODO: Replace with real API call ──────────────────────────────────
     await Future.delayed(const Duration(seconds: 2));
 
-    // Mock result — remove once the real API is connected.
     const result = ScanResult(
       nameEn: 'Medjool Date',
       nameAr: 'تمر المجدول',
@@ -218,18 +197,36 @@ class _ScanScreenState extends State<ScanScreen>
       carbs: 75,
       fiber: 7,
       potassium: 696,
-      imageUrl: 'https://images.unsplash.com/photo-1590004953392-5aba2e72269a?w=800',
+      imageUrl:
+          'https://images.unsplash.com/photo-1590004953392-5aba2e72269a?w=800',
     );
     // ─────────────────────────────────────────────────────────────────────
 
     if (!mounted) return;
     setState(() => _isAnalyzing = false);
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ScanResultScreen(result: result),
+    // ── Save to scan history ──────────────────────────────────────────────
+    scanHistoryNotifier.add(
+      ScanHistoryEntry(
+        id: _uuid.v4(),
+        nameEn: result.nameEn,
+        nameAr: result.nameAr,
+        originEn: result.originEn,
+        originAr: result.originAr,
+        confidence: result.confidence,
+        calories: result.calories,
+        carbs: result.carbs,
+        fiber: result.fiber,
+        potassium: result.potassium,
+        imageUrl: result.imageUrl,
+        imagePath: 'assets/images/medjool.png',
+        scannedAt: DateTime.now(),
       ),
     );
+
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)));
   }
 
   @override
@@ -251,7 +248,6 @@ class _ScanScreenState extends State<ScanScreen>
         body: SafeArea(
           child: Column(
             children: [
-              // ── Top bar ───────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -313,7 +309,6 @@ class _ScanScreenState extends State<ScanScreen>
 
               const Spacer(),
 
-              // ── Scan frame ────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: AnimatedBuilder(
@@ -350,7 +345,6 @@ class _ScanScreenState extends State<ScanScreen>
 
               const SizedBox(height: 20),
 
-              // ── Hint / status text ────────────────────────────────────
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -373,13 +367,11 @@ class _ScanScreenState extends State<ScanScreen>
 
               const Spacer(),
 
-              // ── Bottom controls ───────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Gallery button
                     Column(
                       children: [
                         _CircleButton(
@@ -397,8 +389,6 @@ class _ScanScreenState extends State<ScanScreen>
                         ),
                       ],
                     ),
-
-                    // Capture / Analyze button
                     GestureDetector(
                       onTap: _isAnalyzing ? null : _onCaptureTap,
                       child: Container(
@@ -433,8 +423,6 @@ class _ScanScreenState extends State<ScanScreen>
                               ),
                       ),
                     ),
-
-                    // Flash button
                     Column(
                       children: [
                         _CircleButton(
@@ -443,15 +431,9 @@ class _ScanScreenState extends State<ScanScreen>
                           onTap: () async {
                             if (_cameraController == null) return;
                             try {
-                              if (_flashOn) {
-                                await _cameraController!.setFlashMode(
-                                  FlashMode.off,
-                                );
-                              } else {
-                                await _cameraController!.setFlashMode(
-                                  FlashMode.torch,
-                                );
-                              }
+                              await _cameraController!.setFlashMode(
+                                _flashOn ? FlashMode.off : FlashMode.torch,
+                              );
                               setState(() => _flashOn = !_flashOn);
                             } catch (_) {}
                           },
@@ -472,7 +454,6 @@ class _ScanScreenState extends State<ScanScreen>
 
               const SizedBox(height: 20),
 
-              // ── Status bar ────────────────────────────────────────────
               Column(
                 children: [
                   Row(
@@ -500,7 +481,7 @@ class _ScanScreenState extends State<ScanScreen>
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: _isAnalyzing ? null : null,
+                        value: null,
                         backgroundColor: Colors.white12,
                         color: const Color(0xFF7D5A3C),
                         minHeight: 4,
@@ -519,7 +500,6 @@ class _ScanScreenState extends State<ScanScreen>
   }
 
   Widget _buildFrameContent() {
-    // Show picked image from gallery
     if (_pickedImage != null) {
       return Stack(
         fit: StackFit.expand,
@@ -535,13 +515,9 @@ class _ScanScreenState extends State<ScanScreen>
         ],
       );
     }
-
-    // Show live camera
     if (_isCameraInitialized && _cameraController != null) {
       return CameraPreview(_cameraController!);
     }
-
-    // Loading state
     return Container(
       color: Colors.black,
       child: const Center(
@@ -557,7 +533,6 @@ class _CircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final double size;
-
   const _CircleButton({
     required this.icon,
     required this.onTap,

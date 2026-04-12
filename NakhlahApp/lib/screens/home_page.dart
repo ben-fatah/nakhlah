@@ -16,13 +16,10 @@ import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import '../repositories/user_repository.dart';
 import '../repositories/seller_repository.dart';
+import '../domain/scan_history_notifier.dart';
 import '../models/scan_result.dart';
 import '../models/seller_model.dart';
 import '../models/user_model.dart';
-
-// ── IndexedStack tab indices ──────────────────────────────────────────────────
-// 0 = Home, 1 = Explore, 2 = Market, 3 = Profile
-// Scan is NOT in the stack — it is pushed as a modal route to isolate camera lifecycle.
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,36 +29,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // ── IndexedStack index mapping ─────────────────────────────────────────────
-  // 0=Home, 1=Explore, 2=Market, 3=Profile
-  // Scan is index 2 in the nav bar but is NOT in the stack — pushed as a modal.
   int _selectedIndex = 0;
 
-  // Map nav-bar index → stack index (skip slot 2 which is the Scan FAB)
-  static const Map<int, int> _navToStackIndex = {
-    0: 0, // Home
-    1: 1, // Explore
-    3: 2, // Market
-    4: 3, // Profile
-  };
+  static const Map<int, int> _navToStackIndex = {0: 0, 1: 1, 3: 2, 4: 3};
 
-  // Stored as a field so IndexedStack children are never recreated across
-  // setState() calls — they keep their scroll position, form state, etc.
   late final List<Widget> _stackScreens;
 
   @override
   void initState() {
     super.initState();
     _stackScreens = [
-      const _HomeContent(),                          // stack index 0
-      const ExploreScreen(),                         // stack index 1
-      market.MarketScreen(onTabChange: _onNavTap),  // stack index 2
-      const ManageProfileScreen(),                   // stack index 3
+      const _HomeContent(),
+      const ExploreScreen(),
+      market.MarketScreen(onTabChange: _onNavTap),
+      const ManageProfileScreen(),
     ];
   }
 
   void _onNavTap(int navIndex) {
-    // Scan tab (nav index 2) → push as modal to isolate camera lifecycle
     if (navIndex == 2) {
       Navigator.of(
         context,
@@ -75,7 +60,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    // Resolve the stack child index from the current nav selection
     final stackIndex = _navToStackIndex[_selectedIndex] ?? 0;
 
     return Scaffold(
@@ -88,15 +72,15 @@ class _HomePageState extends State<HomePage> {
         profileLabel: l10n.profile,
         onTap: _onNavTap,
       ),
-      // IndexedStack keeps all screens alive — state (scroll, data) is preserved
       body: IndexedStack(index: stackIndex, children: _stackScreens),
     );
   }
 }
 
-// ── Home Tab Content (extracted so it can live inside IndexedStack) ────────────
+// ── Home Tab Content ───────────────────────────────────────────────────────────
 class _HomeContent extends StatefulWidget {
   const _HomeContent();
+
   @override
   State<_HomeContent> createState() => _HomeContentState();
 }
@@ -105,20 +89,6 @@ class _HomeContentState extends State<_HomeContent>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
-
-  final List<_ScanItem> _recentScans = const [
-    _ScanItem(name: 'Ajwa', match: 98, imageAsset: 'assets/images/ajwa.png'),
-    _ScanItem(
-      name: 'Medjool',
-      match: 92,
-      imageAsset: 'assets/images/medjool.png',
-    ),
-    _ScanItem(
-      name: 'Sukari',
-      match: 85,
-      imageAsset: 'assets/images/sukari.png',
-    ),
-  ];
 
   final _userRepo = UserRepository();
   final _sellerRepo = SellerRepository();
@@ -134,34 +104,20 @@ class _HomeContentState extends State<_HomeContent>
     _subscribeToUser();
   }
 
-  /// Subscribes to the Firestore user document stream.
-  ///
-  /// Resolution order (first non-empty wins):
-  ///   1. Firestore `fullName` (first word)
-  ///   2. Firebase Auth `displayName` (first word)
-  ///   3. email prefix before `@`
-  ///
-  /// Both the initial value and every subsequent Firestore write arrive
-  /// through this single listener — no double read, no polling.
   void _subscribeToUser() {
     _userSub = _userRepo.watchCurrentUser().listen((appUser) {
       if (!mounted) return;
       String name = '';
 
-      // 1) Firestore fullName
       final fullName = appUser?.fullName.trim() ?? '';
-      if (fullName.isNotEmpty) {
-        name = fullName.split(' ').first;
-      }
+      if (fullName.isNotEmpty) name = fullName.split(' ').first;
 
-      // 2) Firebase Auth displayName
       if (name.isEmpty) {
         final displayName =
             FirebaseAuth.instance.currentUser?.displayName?.trim() ?? '';
         if (displayName.isNotEmpty) name = displayName.split(' ').first;
       }
 
-      // 3) Email prefix
       if (name.isEmpty) {
         final email =
             appUser?.email.trim() ??
@@ -182,11 +138,12 @@ class _HomeContentState extends State<_HomeContent>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // required by AutomaticKeepAliveClientMixin
+    super.build(context);
     final l = AppLocalizations.of(context);
+
     return SafeArea(
-      top: false, // header handles its own top padding via MediaQuery
-      bottom: false, // bottom handled by Scaffold's BottomNavigationBar
+      top: false,
+      bottom: false,
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,19 +167,51 @@ class _HomeContentState extends State<_HomeContent>
             _SectionHeader(
               title: l.recentScans,
               actionLabel: l.viewAll,
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const HistoryScreen()),
-              ),
+              onAction: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HistoryScreen())),
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              height: 190,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _recentScans.length,
-                itemBuilder: (context, i) => _ScanCard2(item: _recentScans[i]),
-              ),
+            // ── Recent scans from scanHistoryNotifier (live) ──────────────
+            ValueListenableBuilder<List<ScanHistoryEntry>>(
+              valueListenable: scanHistoryNotifier,
+              builder: (_, scans, __) {
+                final recent = scans.take(5).toList();
+                if (recent.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderLight),
+                      ),
+                      child: Center(
+                        child: Text(
+                          l.isArabic
+                              ? 'لا توجد عمليات مسح بعد'
+                              : 'No scans yet — try scanning a date!',
+                          style: GoogleFonts.cairo(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return SizedBox(
+                  height: 190,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: recent.length,
+                    itemBuilder: (context, i) =>
+                        _ScanHistoryCard(entry: recent[i]),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 28),
             _SellerAdvertisementCard(l: l),
@@ -256,8 +245,7 @@ class _HomeContentState extends State<_HomeContent>
 class _Header extends StatelessWidget {
   final String firstName;
   final AppLocalizations l;
-  final VoidCallback onNotification;
-  final VoidCallback onLanguage;
+  final VoidCallback onNotification, onLanguage;
 
   const _Header({
     required this.firstName,
@@ -282,11 +270,9 @@ class _Header extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row: language toggle + notification ────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Language toggle
               GestureDetector(
                 onTap: onLanguage,
                 child: Container(
@@ -319,7 +305,6 @@ class _Header extends StatelessWidget {
                   ),
                 ),
               ),
-              // Notification bell
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -350,36 +335,22 @@ class _Header extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          // ── Greeting row ──────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${l.greeting}, $firstName 👋',
-                      style: GoogleFonts.cairo(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l.identifyInSeconds,
-                      style: GoogleFonts.cairo(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            '${l.greeting}, $firstName 👋',
+            style: GoogleFonts.cairo(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l.identifyInSeconds,
+            style: GoogleFonts.cairo(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -387,13 +358,10 @@ class _Header extends StatelessWidget {
   }
 }
 
-// ── Scan Promo Card ───────────────────────────────────────────────────────────
+// ── Scan Promo Card ────────────────────────────────────────────────────────────
 class _ScanCard extends StatelessWidget {
   final VoidCallback onScan;
-  final String label;
-  final String subtitle;
-  final String buttonLabel;
-
+  final String label, subtitle, buttonLabel;
   const _ScanCard({
     required this.onScan,
     required this.label,
@@ -495,7 +463,7 @@ class _ScanCard extends StatelessWidget {
   }
 }
 
-// ── Section Header ────────────────────────────────────────────────────────────
+// ── Section Header ─────────────────────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   final String title, actionLabel;
   final VoidCallback onAction;
@@ -542,35 +510,30 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ── Recent Scan Card ──────────────────────────────────────────────────────────
-class _ScanCard2 extends StatelessWidget {
-  final _ScanItem item;
-  const _ScanCard2({required this.item});
+// ── Recent Scan History Card (live data) ──────────────────────────────────────
+class _ScanHistoryCard extends StatelessWidget {
+  final ScanHistoryEntry entry;
+  const _ScanHistoryCard({required this.entry});
 
   @override
   Widget build(BuildContext context) {
+    final isAr = localeProvider.isArabic;
     return GestureDetector(
-      // Tap the scan card to open the result detail screen for that scan
       onTap: () {
-        // Build a ScanResult from the static scan item data.
-        // Nutrition values are representative defaults per 100 g;
-        // they will be replaced by real API data once the backend is live.
-        final nutrition = _nutritionFor(item.name);
         final result = ScanResult(
-          nameEn: item.name,
-          nameAr: _arabicNameFor(item.name),
-          originEn: 'Saudi Arabia',
-          originAr: 'المملكة العربية السعودية',
-          confidence: item.match / 100,
-          calories: nutrition['calories']!,
-          carbs: nutrition['carbs']!,
-          fiber: nutrition['fiber']!,
-          potassium: nutrition['potassium']!,
+          nameEn: entry.nameEn,
+          nameAr: entry.nameAr,
+          originEn: entry.originEn,
+          originAr: entry.originAr,
+          confidence: entry.confidence,
+          calories: entry.calories,
+          carbs: entry.carbs,
+          fiber: entry.fiber,
+          potassium: entry.potassium,
+          imageUrl: entry.imageUrl,
         );
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ScanResultScreen(result: result),
-          ),
+          MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
         );
       },
       child: Container(
@@ -591,23 +554,34 @@ class _ScanCard2 extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.asset(
-                item.imageAsset,
-                height: 110,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stack) => Container(
-                  height: 110,
-                  color: const Color(0xFF2A3A3A),
-                  child: const Icon(
-                    Icons.eco_rounded,
-                    color: Colors.white54,
-                    size: 40,
-                  ),
-                ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
+              child: entry.imagePath.isNotEmpty
+                  ? Image.asset(
+                      entry.imagePath,
+                      height: 110,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 110,
+                        color: const Color(0xFF2A3A3A),
+                        child: const Icon(
+                          Icons.eco_rounded,
+                          color: Colors.white54,
+                          size: 40,
+                        ),
+                      ),
+                    )
+                  : Container(
+                      height: 110,
+                      color: const Color(0xFF2A3A3A),
+                      child: const Icon(
+                        Icons.eco_rounded,
+                        color: Colors.white54,
+                        size: 40,
+                      ),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
@@ -615,7 +589,9 @@ class _ScanCard2 extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.name,
+                    isAr ? entry.nameAr : entry.nameEn,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
@@ -633,7 +609,7 @@ class _ScanCard2 extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${item.match}% Match',
+                      '${entry.matchPercent}% Match',
                       style: GoogleFonts.cairo(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -649,47 +625,9 @@ class _ScanCard2 extends StatelessWidget {
       ),
     );
   }
-
-  /// Maps an English date name to its Arabic equivalent for the result screen.
-  String _arabicNameFor(String name) {
-    const map = {
-      'Ajwa': 'عجوة',
-      'Medjool': 'مجدول',
-      'Sukari': 'سكري',
-      'Khalas': 'خلاص',
-      'Barhi': 'برحي',
-      'Sagai': 'سقعي',
-    };
-    return map[name] ?? name;
-  }
-
-  /// Representative per-100 g nutrition values for each variety.
-  /// These are approximations — replace with real API data when available.
-  Map<String, int> _nutritionFor(String name) {
-    const table = {
-      'Ajwa':    {'calories': 277, 'carbs': 75, 'fiber': 7, 'potassium': 696},
-      'Medjool': {'calories': 277, 'carbs': 75, 'fiber': 7, 'potassium': 696},
-      'Sukari':  {'calories': 282, 'carbs': 76, 'fiber': 8, 'potassium': 650},
-      'Khalas':  {'calories': 271, 'carbs': 73, 'fiber': 6, 'potassium': 670},
-      'Barhi':   {'calories': 268, 'carbs': 72, 'fiber': 6, 'potassium': 630},
-      'Sagai':   {'calories': 270, 'carbs': 74, 'fiber': 7, 'potassium': 660},
-    };
-    return table[name] ?? {'calories': 277, 'carbs': 75, 'fiber': 7, 'potassium': 696};
-  }
 }
 
-class _ScanItem {
-  final String name;
-  final int match;
-  final String imageAsset;
-  const _ScanItem({
-    required this.name,
-    required this.match,
-    required this.imageAsset,
-  });
-}
-
-// ── Seller Card ───────────────────────────────────────────────────────────────
+// ── Seller Card ────────────────────────────────────────────────────────────────
 class _SellerCard extends StatelessWidget {
   final Seller item;
   const _SellerCard({required this.item});
@@ -697,10 +635,9 @@ class _SellerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Tap the seller card to open the full seller profile page
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => SellerScreen(seller: item)),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => SellerScreen(seller: item))),
       child: Container(
         width: 180,
         margin: const EdgeInsets.only(right: 14),
@@ -801,7 +738,7 @@ class _SellerCard extends StatelessWidget {
   }
 }
 
-// ── Seller Advertisement Card ────────────────────────────────────────────────
+// ── Seller Advertisement Card ──────────────────────────────────────────────────
 class _SellerAdvertisementCard extends StatelessWidget {
   final AppLocalizations l;
   const _SellerAdvertisementCard({required this.l});
@@ -840,44 +777,38 @@ class _SellerAdvertisementCard extends StatelessWidget {
           ),
         ),
         padding: const EdgeInsets.all(20),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    l.sellerAdTitle,
-                    style: GoogleFonts.cairo(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        l.sellerAdSubtitle,
-                        style: GoogleFonts.cairo(
-                          color: AppColors.goldBadge,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        l.isArabic
-                            ? Icons.arrow_back_rounded
-                            : Icons.arrow_forward_rounded,
-                        color: AppColors.goldBadge,
-                        size: 16,
-                      ),
-                    ],
-                  ),
-                ],
+            Text(
+              l.sellerAdTitle,
+              style: GoogleFonts.cairo(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  l.sellerAdSubtitle,
+                  style: GoogleFonts.cairo(
+                    color: AppColors.goldBadge,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  l.isArabic
+                      ? Icons.arrow_back_rounded
+                      : Icons.arrow_forward_rounded,
+                  color: AppColors.goldBadge,
+                  size: 16,
+                ),
+              ],
             ),
           ],
         ),

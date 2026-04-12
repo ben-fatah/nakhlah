@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../theme/app_colors.dart';
 import '../core/validators.dart';
@@ -8,11 +12,12 @@ import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
 import '../repositories/user_repository.dart';
+import '../domain/favorites_notifier.dart';
+import '../domain/scan_history_notifier.dart';
 import 'auth/otp_verification_screen.dart';
 import 'sign_in_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
-import '../domain/favorites_notifier.dart';
 
 class ManageProfileScreen extends StatefulWidget {
   const ManageProfileScreen({super.key});
@@ -28,14 +33,15 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   final _phoneCtrl = TextEditingController();
 
   bool _isLoading = false;
+  bool _isUploadingPhoto = false;
   bool _isFetching = true;
   String? _photoUrl;
-
-  /// The phone number as loaded from Firestore — used to detect edits.
   String _originalPhone = '';
 
   final _auth = FirebaseAuth.instance;
+  final _storage = FirebaseStorage.instance;
   final _userRepo = UserRepository();
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -65,7 +71,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ? appUser.email
             : user.email ?? '';
         _phoneCtrl.text = appUser.phone;
-        _originalPhone = appUser.phone;   // snapshot for change detection
+        _originalPhone = appUser.phone;
         _photoUrl = appUser.photoUrl.isNotEmpty
             ? appUser.photoUrl
             : user.photoURL ?? '';
@@ -80,11 +86,82 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
-  /// Saves profile changes.
-  ///
-  /// If the phone number was edited, the user must verify via OTP before the
-  /// new number is persisted. All other fields (name, email) are saved first
-  /// without requiring OTP.
+  // ── Photo Upload ──────────────────────────────────────────────────────────
+
+  Future<void> _pickAndUploadPhoto() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    // Request permission
+    PermissionStatus status = await Permission.photos.request();
+    if (!status.isGranted) status = await Permission.storage.request();
+    if (!status.isGranted) {
+      if (mounted) {
+        _showSnackBar(
+          localeProvider.isArabic
+              ? 'يرجى منح إذن الوصول إلى المعرض'
+              : 'Gallery permission is required.',
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (picked == null) return;
+
+    setState(() => _isUploadingPhoto = true);
+
+    try {
+      final file = File(picked.path);
+      final ext = picked.name.split('.').last.toLowerCase();
+      final ref = _storage
+          .ref()
+          .child('profile_photos')
+          .child('${user.uid}.$ext');
+
+      // Upload
+      final task = await ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/$ext'),
+      );
+
+      // Get download URL
+      final url = await task.ref.getDownloadURL();
+
+      // Save to Firestore + Firebase Auth profile
+      await _userRepo.updateUser(user.uid, {'photoUrl': url});
+      await user.updatePhotoURL(url);
+
+      if (mounted) {
+        setState(() => _photoUrl = url);
+        _showSnackBar(
+          localeProvider.isArabic
+              ? 'تم تحديث الصورة بنجاح!'
+              : 'Photo updated successfully!',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(
+          localeProvider.isArabic
+              ? 'فشل رفع الصورة. حاول مجدداً.'
+              : 'Photo upload failed. Try again.',
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  // ── Save Changes ──────────────────────────────────────────────────────────
+
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     final user = _auth.currentUser;
@@ -95,40 +172,31 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ── 1. Save name + email immediately (no OTP needed) ──────────────────
       await _userRepo.updateUser(user.uid, {
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        // Only write phone if it has NOT changed — changed phone is written
-        // after OTP succeeds (see _savePhoneAfterOtp).
         if (!phoneChanged) 'phone': newPhone,
       });
 
       if (!mounted) return;
 
-      // ── 2. Phone changed → trigger OTP flow ───────────────────────────────
       if (phoneChanged) {
-        // Format to E.164 if the user typed a local Saudi number (05xxxxxxxx)
         final e164 = _toE164(newPhone);
-        if (!mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => OtpVerificationScreen(
               phoneNumber: e164,
-              // Called by OtpVerificationScreen after successful verification.
-              // We use linkWithCredential so the phone is attached to the
-              // existing account rather than creating a new one.
               onVerified: () => _savePhoneAfterOtp(user.uid, newPhone),
             ),
           ),
         );
-        // Reset loading — OTP screen takes over
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
-      // ── 3. No phone change — show success ─────────────────────────────────
-      if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
+      if (mounted) {
+        _showSnackBar(AppLocalizations.of(context).profileUpdated);
+      }
     } catch (e) {
       if (mounted) {
         _showSnackBar(AppLocalizations.of(context).failedToSave, isError: true);
@@ -138,14 +206,12 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
-  /// Persists the new phone number to Firestore after OTP is verified.
-  /// Pops back to the profile page and shows a success snackbar.
   Future<void> _savePhoneAfterOtp(String uid, String phone) async {
     try {
       await _userRepo.updateUser(uid, {'phone': phone});
-      _originalPhone = phone; // keep snapshot in sync
+      _originalPhone = phone;
       if (mounted) {
-        Navigator.of(context).pop(); // pop OTP screen
+        Navigator.of(context).pop();
         _showSnackBar(AppLocalizations.of(context).profileUpdated);
       }
     } catch (e) {
@@ -155,14 +221,11 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
-  /// Converts a local Saudi number (05xxxxxxxxx) to E.164 (+966xxxxxxxxx).
-  /// Numbers already starting with '+' are returned unchanged.
   String _toE164(String phone) {
     if (phone.startsWith('+')) return phone;
     if (phone.startsWith('05') && phone.length == 10) {
       return '+966${phone.substring(1)}';
     }
-    // Fallback: prepend Saudi country code
     return '+966$phone';
   }
 
@@ -317,51 +380,97 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ── Static avatar (image editing temporarily disabled) ────────
-          Container(
-            width: 92,
-            height: 92,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.goldenDate,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 3,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          // ── Avatar with upload overlay ─────────────────────────────────
+          GestureDetector(
+            onTap: _isUploadingPhoto ? null : _pickAndUploadPhoto,
+            child: Stack(
+              children: [
+                Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.goldenDate,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                        ? Image.network(
+                            _photoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                _userInitial,
+                                style: GoogleFonts.cairo(
+                                  fontSize: 38,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              _userInitial,
+                              style: GoogleFonts.cairo(
+                                fontSize: 38,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
                 ),
-              ],
-            ),
-            child: ClipOval(
-              child: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                  ? Image.network(
-                      _photoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Center(
-                        child: Text(
-                          _userInitial,
-                          style: GoogleFonts.cairo(
-                            fontSize: 38,
-                            fontWeight: FontWeight.w800,
+                // Upload indicator / camera icon overlay
+                if (_isUploadingPhoto)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withValues(alpha: 0.5),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
                             color: Colors.white,
+                            strokeWidth: 2.5,
                           ),
                         ),
                       ),
-                    )
-                  : Center(
-                      child: Text(
-                        _userInitial,
-                        style: GoogleFonts.cairo(
-                          fontSize: 38,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                    ),
+                  )
+                else
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.goldenDate,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        size: 14,
+                        color: Colors.white,
                       ),
                     ),
+                  ),
+              ],
             ),
           ),
 
@@ -382,8 +491,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
-          // ── Phone number subtitle ──────────────────────────────────────
-          if (phone.isNotEmpty) ...[  
+          if (phone.isNotEmpty) ...[
             const SizedBox(height: 2),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -445,7 +553,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          // ── Full Name ────────────────────────────────────────────────
           TextFormField(
             controller: _nameCtrl,
             textCapitalization: TextCapitalization.words,
@@ -456,7 +563,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             validator: AppValidators.fullName,
           ),
           const SizedBox(height: 16),
-          // ── Email ────────────────────────────────────────────────────
           TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
@@ -467,7 +573,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             validator: AppValidators.email,
           ),
           const SizedBox(height: 16),
-          // ── Phone Number ─────────────────────────────────────────────
           TextFormField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
@@ -476,7 +581,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
               hintText: l.phoneHint,
               prefixIcon: const Icon(Icons.phone_outlined),
             ),
-            // Phone is optional — only validate when a value is entered
             validator: (v) {
               if (v == null || v.trim().isEmpty) return null;
               return AppValidators.phoneNumber(v);
@@ -524,30 +628,33 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   Widget _buildStatCards(AppLocalizations l) {
     return Row(
       children: [
+        // Scan count — live from scanHistoryNotifier
         Expanded(
-          child: _StatCard(
-            icon: Icons.camera_alt_outlined,
-            value: '3', // Matches mocked scan count from home page
-            label: l.datesScanned,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const HistoryScreen()),
+          child: ValueListenableBuilder<List<ScanHistoryEntry>>(
+            valueListenable: scanHistoryNotifier,
+            builder: (_, scans, __) => _StatCard(
+              icon: Icons.camera_alt_outlined,
+              value: scans.length.toString(),
+              label: l.datesScanned,
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const HistoryScreen())),
             ),
           ),
         ),
         const SizedBox(width: 14),
+        // Favorites count — live from favoritesNotifier
         Expanded(
           child: ValueListenableBuilder<Set<String>>(
             valueListenable: favoritesNotifier,
-            builder: (context, favorites, _) {
-              return _StatCard(
-                icon: Icons.favorite_outline_rounded,
-                value: favorites.length.toString(),
-                label: l.savedFavorites,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FavoritesScreen()),
-                ),
-              );
-            },
+            builder: (_, favorites, __) => _StatCard(
+              icon: Icons.favorite_outline_rounded,
+              value: favorites.length.toString(),
+              label: l.savedFavorites,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+              ),
+            ),
           ),
         ),
       ],
@@ -665,10 +772,8 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final IconData icon;
-  final String value;
-  final String label;
+  final String value, label;
   final VoidCallback onTap;
-
   const _StatCard({
     required this.icon,
     required this.value,
@@ -681,52 +786,52 @@ class _StatCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brown700.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brown700.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.goldenDate.withValues(alpha: 0.12),
+              ),
+              child: Icon(icon, color: AppColors.goldenDate, size: 24),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              value,
+              style: GoogleFonts.cairo(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: AppColors.brown700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cairo(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.goldenDate.withValues(alpha: 0.12),
-            ),
-            child: Icon(icon, color: AppColors.goldenDate, size: 24),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            value,
-            style: GoogleFonts.cairo(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: AppColors.brown700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cairo(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade500,
-            ),
-          ),
-        ],
-      ),
-    ),
     );
   }
 }
@@ -750,7 +855,6 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isDestructive ? Colors.red.shade600 : AppColors.brown700;
-
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
       leading: Container(

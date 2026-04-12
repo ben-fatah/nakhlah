@@ -8,7 +8,6 @@ import '../repositories/date_repository.dart';
 import '../repositories/product_repository.dart';
 import 'product_detail_screen.dart';
 
-// ── Screen ───────────────────────────────────────────────────────────────────
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -30,15 +29,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {'key': 'medjool', 'label': l.filterMedjool},
     {'key': 'sukkari', 'label': l.filterSukkari},
     {'key': 'khalas', 'label': l.filterKhalas},
+    {'key': 'barhi', 'label': l.filterBarhi},
+    {'key': 'sagai', 'label': l.filterSagai},
   ];
 
-  List<DateVariety> _filtered(AppLocalizations l) {
-    return _dateRepo.getFiltered(
-      l,
-      tag: _selectedFilter,
-      searchQuery: _searchQuery,
-    );
-  }
+  List<DateVariety> _filtered(AppLocalizations l) =>
+      _dateRepo.getFiltered(l, tag: _selectedFilter, searchQuery: _searchQuery);
 
   @override
   void dispose() {
@@ -51,51 +47,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.screenBg,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(l),
-            _buildSearchBar(l),
-            _buildFilterChips(l),
-            Expanded(child: _buildGrid(l)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Header ─────────────────────────────────────────────────────────────────
-  Widget _buildHeader(AppLocalizations l) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l.exploreDates,
-            style: GoogleFonts.cairo(
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              color: AppColors.brown900,
-            ),
+          // ── Gradient header — matches Home / Market / Profile exactly ──────
+          _ExploreHeader(
+            l: l,
+            isGrid: _isGrid,
+            onToggle: () => setState(() => _isGrid = !_isGrid),
           ),
-          GestureDetector(
-            onTap: () => setState(() => _isGrid = !_isGrid),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.brown900.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _isGrid ? Icons.grid_view_rounded : Icons.view_list_rounded,
-                color: AppColors.brown900,
-                size: 22,
-              ),
-            ),
-          ),
+          _buildSearchBar(l),
+          _buildFilterChips(l),
+          Expanded(child: _buildGrid(l)),
         ],
       ),
     );
@@ -104,7 +67,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   // ── Search Bar ─────────────────────────────────────────────────────────────
   Widget _buildSearchBar(AppLocalizations l) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFEDE8E0),
@@ -143,10 +106,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget _buildFilterChips(AppLocalizations l) {
     final filters = _getFilters(l);
     return SizedBox(
-      height: 48,
+      height: 52,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         itemCount: filters.length,
         itemBuilder: (context, i) {
           final f = filters[i];
@@ -156,7 +119,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.chipActive : Colors.white,
                 borderRadius: BorderRadius.circular(50),
@@ -181,19 +144,29 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  // ── Grid ───────────────────────────────────────────────────────────────────
+  // ── Grid / List ────────────────────────────────────────────────────────────
   Widget _buildGrid(AppLocalizations l) {
     final items = _filtered(l);
     if (items.isEmpty) {
       return Center(
-        child: Text(
-          l.noVarietiesFound,
-          style: GoogleFonts.cairo(color: Colors.grey.shade500, fontSize: 15),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.eco_outlined, color: Colors.grey.shade300, size: 52),
+            const SizedBox(height: 12),
+            Text(
+              l.noVarietiesFound,
+              style: GoogleFonts.cairo(
+                color: Colors.grey.shade500,
+                fontSize: 15,
+              ),
+            ),
+          ],
         ),
       );
     }
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: _isGrid ? 2 : 1,
         crossAxisSpacing: 14,
@@ -208,7 +181,84 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 }
 
-// ── Grid Card ─────────────────────────────────────────────────────────────────
+// ── Gradient header (matches Home / Market / Profile) ─────────────────────────
+class _ExploreHeader extends StatelessWidget {
+  final AppLocalizations l;
+  final bool isGrid;
+  final VoidCallback onToggle;
+
+  const _ExploreHeader({
+    required this.l,
+    required this.isGrid,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.brown900, AppColors.brown700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, topPad + 14, 20, 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l.exploreDates,
+                  style: GoogleFonts.cairo(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l.isArabic
+                      ? 'اكتشف أجود أصناف التمور من أفضل المزارع'
+                      : 'Discover all date varieties in one place',
+                  style: GoogleFonts.cairo(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Grid / List toggle button in header
+          GestureDetector(
+            onTap: onToggle,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isGrid ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Grid Card ──────────────────────────────────────────────────────────────────
 class _GridCard extends StatelessWidget {
   final DateVariety variety;
   final AppLocalizations l;
@@ -217,8 +267,6 @@ class _GridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Look up the matching Product by tag (same string as variety.tag)
-      // so we can pass full product data to ProductDetailScreen.
       onTap: () {
         final product = ProductRepository().getById(variety.tag);
         if (product != null) {
@@ -244,7 +292,6 @@ class _GridCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
             Expanded(
               flex: 5,
               child: ClipRRect(
@@ -266,7 +313,6 @@ class _GridCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Info
             Expanded(
               flex: 4,
               child: Padding(
@@ -328,7 +374,7 @@ class _GridCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '\$${variety.price.toStringAsFixed(2)}',
+                          'SAR ${variety.price.toStringAsFixed(0)}',
                           style: GoogleFonts.cairo(
                             fontSize: 14,
                             fontWeight: FontWeight.w800,
@@ -348,7 +394,7 @@ class _GridCard extends StatelessWidget {
   }
 }
 
-// ── List Card ─────────────────────────────────────────────────────────────────
+// ── List Card ──────────────────────────────────────────────────────────────────
 class _ListCard extends StatelessWidget {
   final DateVariety variety;
   final AppLocalizations l;
@@ -357,7 +403,6 @@ class _ListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Same tag-based lookup used by _GridCard
       onTap: () {
         final product = ProductRepository().getById(variety.tag);
         if (product != null) {
@@ -458,7 +503,7 @@ class _ListCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '\$${variety.price.toStringAsFixed(2)}',
+                          'SAR ${variety.price.toStringAsFixed(0)}',
                           style: GoogleFonts.cairo(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,

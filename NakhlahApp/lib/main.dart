@@ -8,6 +8,8 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'domain/favorites_notifier.dart';
+import 'domain/cart_notifier.dart';
+import 'domain/scan_history_notifier.dart';
 import 'repositories/onboarding_repository.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
@@ -19,24 +21,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // OnboardingRepository loads SharedPreferences once — no duplicate instances
   final onboardingRepo = await OnboardingRepository.create();
 
-  // Restore persisted locale before the app renders anything
   if (onboardingRepo.savedLocale != null) {
     localeProvider.setLocale(Locale(onboardingRepo.savedLocale!));
   }
 
-  // Restore persisted favorites — SharedPreferences.getInstance() is cached
-  // internally so this returns the same instance created inside OnboardingRepository.create().
+  // SharedPreferences.getInstance() is cached — all notifiers share same instance.
   final prefs = await SharedPreferences.getInstance();
   favoritesNotifier.init(prefs);
+  cartNotifier.init(prefs);
+  scanHistoryNotifier.init(prefs);
 
-  runApp(
-    NakhlahApp(
-      onboardingRepo: onboardingRepo,
-    ),
-  );
+  runApp(NakhlahApp(onboardingRepo: onboardingRepo));
 }
 
 class NakhlahApp extends StatelessWidget {
@@ -51,8 +48,6 @@ class NakhlahApp extends StatelessWidget {
         return MaterialApp(
           title: 'Nakhlah',
           debugShowCheckedModeBanner: false,
-
-          // ── Localisation ──────────────────────────────────────────────
           locale: locale,
           supportedLocales: const [Locale('en'), Locale('ar')],
           localizationsDelegates: const [
@@ -61,11 +56,7 @@ class NakhlahApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-
-          // ── Global Theme ──────────────────────────────────────────────
           theme: AppTheme.light(context),
-
-          // ── Auth-Gated Root ───────────────────────────────────────
           home: !onboardingRepo.isOnboardingDone
               ? OnboardingScreen(repository: onboardingRepo)
               : StreamBuilder<User?>(
