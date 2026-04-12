@@ -3,6 +3,8 @@ services:
     name: nakhlah-ai
     runtime: python
 
+    pythonVersion: 3.11.10   # 🔥 FORCE version
+
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -18,6 +20,3 @@ services:
 
       - key: DEVICE
         value: cpu
-
-      - key: WARMUP_ON_STARTUP
-        value: "true"
