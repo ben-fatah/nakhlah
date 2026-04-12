@@ -26,7 +26,24 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
   File? _pickedImage;
-
+/// Maps the model's English label to the correct local asset path.
+/// Falls back to empty string (shows icon placeholder) for unknown labels.
+static String _labelToAssetPath(String label) {
+  const map = {
+    'Ajwa':       'assets/images/ajwa.png',
+    'Medjool':    'assets/images/medjool.png',
+    'Sokari':     'assets/images/sukari.png',   // note: file is sukari.png
+    'Khalas':     'assets/images/khalas.png',
+    'Barhi':      'assets/images/barhi.png',
+    'Sugaey':     'assets/images/sagai.png',    // note: file is sagai.png
+    'Galaxy':     'assets/images/ajwa.png',     // fallback to closest visual
+    'Meneifi':    'assets/images/sukari.png',
+    'Nabtat Ali': 'assets/images/ajwa.png',
+    'Rutab':      'assets/images/medjool.png',
+    'Shaishe':    'assets/images/sukari.png',
+  };
+  return map[label] ?? '';
+}
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -217,8 +234,7 @@ class _ScanScreenState extends State<ScanScreen>
           carbs: result.carbs,
           fiber: result.fiber,
           potassium: result.potassium,
-          imagePath:
-              'assets/images/${result.nameEn.toLowerCase().replaceAll(' ', '_')}.png',
+         imagePath: _labelToAssetPath(result.nameEn),
           scannedAt: DateTime.now(),
         ),
       );

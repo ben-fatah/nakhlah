@@ -11,6 +11,7 @@ import 'domain/favorites_notifier.dart';
 import 'domain/cart_notifier.dart';
 import 'domain/scan_history_notifier.dart';
 import 'repositories/onboarding_repository.dart';
+import 'services/scan_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'screens/sign_in_screen.dart';
@@ -27,11 +28,15 @@ void main() async {
     localeProvider.setLocale(Locale(onboardingRepo.savedLocale!));
   }
 
-  // SharedPreferences.getInstance() is cached — all notifiers share same instance.
   final prefs = await SharedPreferences.getInstance();
   favoritesNotifier.init(prefs);
   cartNotifier.init(prefs);
   scanHistoryNotifier.init(prefs);
+
+  // Fire-and-forget warmup — wakes the Render instance so that the first
+  // scan does not pay the full cold-start penalty (~30–60 s on free tier).
+  // This runs in the background and never blocks or crashes the app.
+  ScanService.warmup();
 
   runApp(NakhlahApp(onboardingRepo: onboardingRepo));
 }
