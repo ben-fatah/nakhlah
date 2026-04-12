@@ -41,11 +41,11 @@ class ScanApiResult {
 class ScanService {
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://nakhlah-ai.onrender.com', // ← your Render URL
+    defaultValue: 'https://nakhlah.onrender.com', // ← your Render URL
   );
   static const String _apiKey = String.fromEnvironment(
     'API_KEY',
-    defaultValue: 'change-me', // ← from Render env
+    defaultValue: 'a6e6b448d18bea6d3763b74c129c08ec', // ← from Render env
   );
 
   static final _dio = Dio(
