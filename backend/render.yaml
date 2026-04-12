@@ -3,8 +3,6 @@ services:
     name: nakhlah-ai
     runtime: python
 
-    pythonVersion: 3.11.10   # 🔥 FORCE version
-
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
@@ -14,9 +12,7 @@ services:
     envVars:
       - key: API_KEY
         generateValue: true
-
       - key: MODEL_PATH
         value: models/nakhlah_v2.onnx
-
       - key: DEVICE
         value: cpu
