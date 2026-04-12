@@ -73,6 +73,8 @@ class AppLocalizations {
       ? 'تعرف على أصناف التمر في ثوانٍ'
       : 'Identify date varieties in seconds';
   String get greeting => isArabic ? 'مرحباً' : 'Marhaba';
+  String get sellerAdTitle => isArabic ? 'تمور سعودية فاخرة' : 'Premium Saudi Dates';
+  String get sellerAdSubtitle => isArabic ? 'انضم كبائع' : 'Join as a Seller';
 
   // ── Profile ─────────────────────────────────────────────────────────────
   String get myProfile => isArabic ? 'ملفي الشخصي' : 'My Profile';
@@ -115,6 +117,35 @@ class AppLocalizations {
       ? 'تم اختيار الصورة. اضغط زر المسح للتحليل.'
       : 'Image selected. Tap scan to analyze.';
 
+  // ── Scan Result ──────────────────────────────────────────────────────────
+  String get scanResult => isArabic ? 'نتيجة المسح' : 'Scan Result';
+  String get confidence => isArabic ? 'نسبة الدقة' : 'Confidence';
+  String get origin => isArabic ? 'المنشأ' : 'Origin';
+  String get verifiedOrigin => isArabic ? 'المنشأ موثق' : 'VERIFIED ORIGIN';
+  String get nutritionPer100g =>
+      isArabic ? 'القيمة الغذائية لكل 100 جم' : 'NUTRITION PER 100 G';
+  String get caloriesLabel => isArabic ? 'السعرات' : 'CALORIES';
+  String get carbsLabel => isArabic ? 'الكربوهيدرات' : 'CARBS';
+  String get fiberLabel => isArabic ? 'الألياف' : 'FIBER';
+  String get potassiumLabel => isArabic ? 'البوتاسيوم' : 'POTASSIUM';
+  String get findSellers => isArabic ? 'ابحث عن بائعين' : 'Find Sellers';
+  String get shareResults => isArabic ? 'مشاركة النتائج' : 'Share Results';
+  String get scanAgain => isArabic ? 'مسح مجدداً' : 'Scan Again';
+  String get errorAnalyzing =>
+      isArabic ? 'تعذر تحليل الصورة.' : 'Could not analyze image.';
+  String get tryAgain => isArabic ? 'حاول مجدداً' : 'Try Again';
+  String shareText(String name, String origin, String confidence) => isArabic
+      ? '🌴 نتيجة مسح نخلة:\n'
+            'الصنف: $name\n'
+            'المنشأ: $origin\n'
+            'نسبة الدقة: $confidence\n\n'
+            'تم المسح بواسطة تطبيق نخلة 🌿'
+      : '🌴 Nakhlah Scan Result:\n'
+            'Variety: $name\n'
+            'Origin: $origin\n'
+            'Confidence: $confidence\n\n'
+            'Scanned via the Nakhlah app 🌿';
+
   // ── Explore ──────────────────────────────────────────────────────────────
   String get exploreDates => isArabic ? 'استكشاف التمور' : 'Explore Dates';
   String get searchHint => isArabic
@@ -130,6 +161,8 @@ class AppLocalizations {
   String get filterMedjool => isArabic ? 'مجدول' : 'Medjool';
   String get filterSukkari => isArabic ? 'سكري' : 'Sukkari';
   String get filterKhalas => isArabic ? 'خلاص' : 'Khalas';
+  String get filterBarhi => isArabic ? 'برحي' : 'Barhi';
+  String get filterSagai => isArabic ? 'صقعي' : 'Sagai';
 
   // Variety names
   String get ajwaAlMadinah => isArabic ? 'عجوة المدينة' : 'Ajwa Al-Madinah';
@@ -147,7 +180,51 @@ class AppLocalizations {
       isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
   String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
   String get originRiyadh => isArabic ? 'الرياض، السعودية' : 'Riyadh, KSA';
+
+  // ── Notifications ────────────────────────────────────────────────────────
+  String get notifications => isArabic ? 'الإشعارات' : 'Notifications';
+  String get noNotificationsYet =>
+      isArabic ? 'لا توجد إشعارات حتى الآن' : 'No notifications yet';
+  String get noNotificationsSubtitle => isArabic
+      ? 'ستظهر هنا إشعارات العروض والتحديثات'
+      : 'Offers and updates will appear here';
+
+  // ── History ──────────────────────────────────────────────────────────────
+  String get scanHistory => isArabic ? 'سجل المسح' : 'Scan History';
+  String get noScansYet => isArabic ? 'لا توجد عمليات مسح بعد' : 'No scans yet';
+  String get noScansYetSubtitle => isArabic
+      ? 'امسح ثمرة تمر لرؤية سجلك هنا'
+      : 'Scan a date fruit to see your history here';
+
+  // ── Product Detail ────────────────────────────────────────────────────────
+  String get productDetails =>
+      isArabic ? 'تفاصيل المنتج' : 'Product Details';
+  String get description => isArabic ? 'الوصف' : 'Description';
+  String get sellers => isArabic ? 'البائعون' : 'Sellers';
+  String get addToCart => isArabic ? 'أضف إلى السلة' : 'Add to Cart';
+  String get addedToFavorites =>
+      isArabic ? 'أُضيف إلى المفضلة ❤' : 'Added to favorites ❤';
+  String get removedFromFavorites =>
+      isArabic ? 'أُزيل من المفضلة' : 'Removed from favorites';
+  String get noSellersFound => isArabic
+      ? 'لا يوجد بائعون لهذا المنتج'
+      : 'No sellers found for this product';
+  String get viewSellerProfile =>
+      isArabic ? 'عرض ملف البائع' : 'View Seller Profile';
+
+  // ── Seller Page ───────────────────────────────────────────────────────────
+  String get sellerProfile => isArabic ? 'ملف البائع' : 'Seller Profile';
+  String get aboutSeller => isArabic ? 'عن البائع' : 'About';
+  String get sellerProducts => isArabic ? 'المنتجات' : 'Products';
+  String get contactSeller => isArabic ? 'تواصل' : 'Contact';
+  String get callSeller => isArabic ? 'اتصل بالبائع' : 'Call Seller';
+  String get verifiedSeller => isArabic ? 'بائع موثق' : 'Verified Seller';
+  String get topSeller => isArabic ? 'أفضل بائع' : 'Top Seller';
+  String get noProductsForSeller =>
+      isArabic ? 'لا توجد منتجات لهذا البائع' : 'No products listed';
+  String get reviewsLabel => isArabic ? 'تقييم' : 'reviews';
 }
+
 
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {

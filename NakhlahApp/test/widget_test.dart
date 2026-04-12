@@ -1,30 +1,30 @@
-// This is a basic Flutter widget test.
+// Basic smoke test — verifies NakhlahApp builds without throwing.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// We create an OnboardingRepository from an in-memory SharedPreferences
+// instance (no file I/O) and pass it to NakhlahApp exactly like main() does.
+//
+// onboarding_done=false means OnboardingScreen is shown, which does not
+// require FirebaseAuth — so the test runs cleanly with no Firebase mocking.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nakhlah/main.dart';
+import 'package:nakhlah/repositories/onboarding_repository.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const NakhlahApp(onboardingDone: true));
+  testWidgets('NakhlahApp builds without throwing', (WidgetTester tester) async {
+    // In-memory prefs — no file system access needed in tests.
+    SharedPreferences.setMockInitialValues({'onboarding_done': false});
+    final prefs = await SharedPreferences.getInstance();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Bypasses the SharedPreferences singleton and FirebaseAuth entirely —
+    // onboarding_done=false routes to OnboardingScreen, not the auth stream.
+    final repo = OnboardingRepository(prefs: prefs);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpWidget(NakhlahApp(onboardingRepo: repo));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

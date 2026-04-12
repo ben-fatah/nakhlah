@@ -8,7 +8,11 @@ import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/auth_service.dart';
 import '../repositories/user_repository.dart';
+import 'auth/otp_verification_screen.dart';
 import 'sign_in_screen.dart';
+import 'favorites_screen.dart';
+import 'history_screen.dart';
+import '../domain/favorites_notifier.dart';
 
 class ManageProfileScreen extends StatefulWidget {
   const ManageProfileScreen({super.key});
@@ -26,6 +30,9 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   bool _isLoading = false;
   bool _isFetching = true;
   String? _photoUrl;
+
+  /// The phone number as loaded from Firestore — used to detect edits.
+  String _originalPhone = '';
 
   final _auth = FirebaseAuth.instance;
   final _userRepo = UserRepository();
@@ -58,6 +65,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
             ? appUser.email
             : user.email ?? '';
         _phoneCtrl.text = appUser.phone;
+        _originalPhone = appUser.phone;   // snapshot for change detection
         _photoUrl = appUser.photoUrl.isNotEmpty
             ? appUser.photoUrl
             : user.photoURL ?? '';
@@ -72,17 +80,54 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
+  /// Saves profile changes.
+  ///
+  /// If the phone number was edited, the user must verify via OTP before the
+  /// new number is persisted. All other fields (name, email) are saved first
+  /// without requiring OTP.
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     final user = _auth.currentUser;
     if (user == null) return;
+
+    final newPhone = _phoneCtrl.text.trim();
+    final phoneChanged = newPhone != _originalPhone && newPhone.isNotEmpty;
+
     setState(() => _isLoading = true);
     try {
+      // ── 1. Save name + email immediately (no OTP needed) ──────────────────
       await _userRepo.updateUser(user.uid, {
         'fullName': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
+        // Only write phone if it has NOT changed — changed phone is written
+        // after OTP succeeds (see _savePhoneAfterOtp).
+        if (!phoneChanged) 'phone': newPhone,
       });
+
+      if (!mounted) return;
+
+      // ── 2. Phone changed → trigger OTP flow ───────────────────────────────
+      if (phoneChanged) {
+        // Format to E.164 if the user typed a local Saudi number (05xxxxxxxx)
+        final e164 = _toE164(newPhone);
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(
+              phoneNumber: e164,
+              // Called by OtpVerificationScreen after successful verification.
+              // We use linkWithCredential so the phone is attached to the
+              // existing account rather than creating a new one.
+              onVerified: () => _savePhoneAfterOtp(user.uid, newPhone),
+            ),
+          ),
+        );
+        // Reset loading — OTP screen takes over
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // ── 3. No phone change — show success ─────────────────────────────────
       if (mounted) _showSnackBar(AppLocalizations.of(context).profileUpdated);
     } catch (e) {
       if (mounted) {
@@ -91,6 +136,34 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Persists the new phone number to Firestore after OTP is verified.
+  /// Pops back to the profile page and shows a success snackbar.
+  Future<void> _savePhoneAfterOtp(String uid, String phone) async {
+    try {
+      await _userRepo.updateUser(uid, {'phone': phone});
+      _originalPhone = phone; // keep snapshot in sync
+      if (mounted) {
+        Navigator.of(context).pop(); // pop OTP screen
+        _showSnackBar(AppLocalizations.of(context).profileUpdated);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(AppLocalizations.of(context).failedToSave, isError: true);
+      }
+    }
+  }
+
+  /// Converts a local Saudi number (05xxxxxxxxx) to E.164 (+966xxxxxxxxx).
+  /// Numbers already starting with '+' are returned unchanged.
+  String _toE164(String phone) {
+    if (phone.startsWith('+')) return phone;
+    if (phone.startsWith('05') && phone.length == 10) {
+      return '+966${phone.substring(1)}';
+    }
+    // Fallback: prepend Saudi country code
+    return '+966$phone';
   }
 
   Future<void> _signOut() async {
@@ -454,16 +527,27 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         Expanded(
           child: _StatCard(
             icon: Icons.camera_alt_outlined,
-            value: '0',
+            value: '3', // Matches mocked scan count from home page
             label: l.datesScanned,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const HistoryScreen()),
+            ),
           ),
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: _StatCard(
-            icon: Icons.favorite_outline_rounded,
-            value: '0',
-            label: l.savedFavorites,
+          child: ValueListenableBuilder<Set<String>>(
+            valueListenable: favoritesNotifier,
+            builder: (context, favorites, _) {
+              return _StatCard(
+                icon: Icons.favorite_outline_rounded,
+                value: favorites.length.toString(),
+                label: l.savedFavorites,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -542,17 +626,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
           ),
           const Divider(height: 1, indent: 56, endIndent: 16),
           _SettingsTile(
-            icon: Icons.restaurant_rounded,
-            label: l.dietaryGoals,
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.goldenDate,
-              size: 22,
-            ),
-            onTap: () => _showSnackBar('Dietary goals coming soon!'),
-          ),
-          const Divider(height: 1, indent: 56, endIndent: 16),
-          _SettingsTile(
             icon: Icons.logout_rounded,
             label: l.logOut,
             isDestructive: true,
@@ -594,16 +667,20 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
+  final VoidCallback onTap;
 
   const _StatCard({
     required this.icon,
     required this.value,
     required this.label,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
@@ -649,6 +726,7 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
+import '../models/scan_result.dart';
 import 'scan_result_screen.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -196,19 +197,38 @@ class _ScanScreenState extends State<ScanScreen>
   Future<void> _analyzeImage(File image) async {
     setState(() => _isAnalyzing = true);
 
-    // ── TODO: Replace with your actual API call ───────────────────────────
+    // ── TODO: Replace the mock below with your real API call ─────────────
     // Example:
-    // final result = await YourApiService.classifyDate(image);
-    // Navigate to result screen with result data
-    //
-    // For now we simulate a 2-second analysis delay:
+    //   final response = await YourApiService.classifyDate(image);
+    //   final result = ScanResult(
+    //     nameEn: response.nameEn,
+    //     nameAr: response.nameAr,
+    //     ... etc
+    //   );
     await Future.delayed(const Duration(seconds: 2));
+
+    // Mock result — remove once the real API is connected.
+    const result = ScanResult(
+      nameEn: 'Medjool Date',
+      nameAr: 'تمر المجدول',
+      originEn: 'Al Madinah, Saudi Arabia',
+      originAr: 'المدينة المنورة، السعودية',
+      confidence: 0.98,
+      calories: 277,
+      carbs: 75,
+      fiber: 7,
+      potassium: 696,
+      imageUrl: 'https://images.unsplash.com/photo-1590004953392-5aba2e72269a?w=800',
+    );
+    // ─────────────────────────────────────────────────────────────────────
 
     if (!mounted) return;
     setState(() => _isAnalyzing = false);
 
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DateDetailScreen()),
+      MaterialPageRoute(
+        builder: (_) => ScanResultScreen(result: result),
+      ),
     );
   }
 

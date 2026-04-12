@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
+import 'domain/favorites_notifier.dart';
 import 'repositories/onboarding_repository.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
@@ -24,6 +26,11 @@ void main() async {
   if (onboardingRepo.savedLocale != null) {
     localeProvider.setLocale(Locale(onboardingRepo.savedLocale!));
   }
+
+  // Restore persisted favorites — SharedPreferences.getInstance() is cached
+  // internally so this returns the same instance created inside OnboardingRepository.create().
+  final prefs = await SharedPreferences.getInstance();
+  favoritesNotifier.init(prefs);
 
   runApp(
     NakhlahApp(

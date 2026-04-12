@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../domain/favorites_notifier.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import '../models/product_model.dart';
 import '../repositories/product_repository.dart';
+import 'product_detail_screen.dart';
 
-// ── Screen ───────────────────────────────────────────────────────────────────
+// ── Screen ────────────────────────────────────────────────────────────────────
 class MarketScreen extends StatefulWidget {
   /// Called when the screen wants to switch to another shell tab.
   /// Pass the nav-bar index: 0=Home, 1=Explore, 3=Market, 4=Profile.
+  ///
+  /// Only supplied when this screen lives inside the shell [IndexedStack].
+  /// When pushed as a standalone route (e.g. from Home's "Explore All"), the
+  /// parameter is omitted and Navigator.pop() is used instead.
   final ValueChanged<int>? onTabChange;
 
   const MarketScreen({super.key, this.onTabChange});
@@ -27,20 +33,20 @@ class _MarketScreenState extends State<MarketScreen> {
   final _productRepo = ProductRepository();
 
   List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
-    {'key': 'all', 'label': l.allVarieties},
-    {'key': 'medjool', 'label': l.filterMedjool},
-    {'key': 'ajwa', 'label': l.filterAjwa},
-    {'key': 'sukkari', 'label': l.filterSukkari},
-    {'key': 'khalas', 'label': l.filterKhalas},
-  ];
+        {'key': 'all', 'label': l.allVarieties},
+        {'key': 'medjool', 'label': l.filterMedjool},
+        {'key': 'ajwa', 'label': l.filterAjwa},
+        {'key': 'sukkari', 'label': l.filterSukkari},
+        {'key': 'khalas', 'label': l.filterKhalas},
+        {'key': 'barhi', 'label': l.filterBarhi},
+        {'key': 'sagai', 'label': l.filterSagai},
+      ];
 
-  List<Product> _filtered(AppLocalizations l) {
-    return _productRepo.getFiltered(
-      l,
-      tag: _selectedFilter,
-      searchQuery: _searchQuery,
-    );
-  }
+  List<Product> _filtered(AppLocalizations l) => _productRepo.getFiltered(
+        l,
+        tag: _selectedFilter,
+        searchQuery: _searchQuery,
+      );
 
   @override
   void dispose() {
@@ -56,91 +62,20 @@ class _MarketScreenState extends State<MarketScreen> {
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.screenBg,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _buildHeader(l),
-              _buildSearchBar(l, isAr),
-              _buildFilterChips(l),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeroBanner(l),
-                      const SizedBox(height: 24),
-                      _buildSectionHeader(l),
-                      const SizedBox(height: 14),
-                      _buildProductGrid(l),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+        body: Column(
+          children: [
+            // ── Gradient header (matches Profile / ManageProfile style) ──────
+            _MarketHeader(l: l),
+            // ── Search bar ────────────────────────────────────────────────────
+            _buildSearchBar(l, isAr),
+            // ── Filter chips ──────────────────────────────────────────────────
+            _buildFilterChips(l),
+            // ── Scrollable body ───────────────────────────────────────────────
+            Expanded(
+              child: _buildScrollBody(l),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  // ── Header ─────────────────────────────────────────────────────────────────
-  Widget _buildHeader(AppLocalizations l) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          GestureDetector(
-            // Navigate back to Home tab via the shell callback.
-            // Falls back to Navigator.pop() if used outside the shell.
-            onTap: () {
-              if (widget.onTabChange != null) {
-                widget.onTabChange!(0);
-              } else {
-                Navigator.of(context).maybePop();
-              }
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.brown900.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.home_rounded,
-                color: AppColors.brown900,
-                size: 22,
-              ),
-            ),
-          ),
-          Text(
-            l.market,
-            style: GoogleFonts.cairo(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.brown900,
-            ),
-          ),
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.brown900.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.menu_rounded,
-                color: AppColors.brown900,
-                size: 22,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -148,7 +83,7 @@ class _MarketScreenState extends State<MarketScreen> {
   // ── Search Bar ─────────────────────────────────────────────────────────────
   Widget _buildSearchBar(AppLocalizations l, bool isAr) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFEDE8E0),
@@ -165,7 +100,7 @@ class _MarketScreenState extends State<MarketScreen> {
               fontSize: 14,
               color: Colors.grey.shade500,
             ),
-            suffixIcon: Icon(
+            prefixIcon: Icon(
               Icons.search_rounded,
               color: Colors.grey.shade500,
               size: 22,
@@ -188,10 +123,10 @@ class _MarketScreenState extends State<MarketScreen> {
   Widget _buildFilterChips(AppLocalizations l) {
     final filters = _getFilters(l);
     return SizedBox(
-      height: 48,
+      height: 52,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         itemCount: filters.length,
         itemBuilder: (context, i) {
           final f = filters[i];
@@ -200,11 +135,9 @@ class _MarketScreenState extends State<MarketScreen> {
             onTap: () => setState(() => _selectedFilter = f['key']!),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.only(
-                left: localeProvider.isArabic ? 10 : 0,
-                right: localeProvider.isArabic ? 0 : 10,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              margin: const EdgeInsets.only(right: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.chipActive : Colors.white,
                 borderRadius: BorderRadius.circular(50),
@@ -229,12 +162,119 @@ class _MarketScreenState extends State<MarketScreen> {
     );
   }
 
+  // ── Scrollable body ────────────────────────────────────────────────────────
+  Widget _buildScrollBody(AppLocalizations l) {
+    final products = _filtered(l);
+    return CustomScrollView(
+      slivers: [
+        // ── Hero banner ──────────────────────────────────────────────────────
+        SliverToBoxAdapter(child: _buildHeroBanner(l)),
+
+        // ── "Newest Products" label ──────────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding:
+                const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            child: Text(
+              l.isArabic ? 'أحدث المنتجات' : 'All Products',
+              style: GoogleFonts.cairo(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.brown900,
+              ),
+            ),
+          ),
+        ),
+
+        // ── Empty state ──────────────────────────────────────────────────────
+        if (products.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.eco_outlined,
+                      color: Colors.grey.shade300, size: 52),
+                  const SizedBox(height: 12),
+                  Text(
+                    l.noVarietiesFound,
+                    style: GoogleFonts.cairo(
+                      color: Colors.grey.shade400,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          // ── Product grid ───────────────────────────────────────────────────
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            sliver: SliverGrid(
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: 0.78,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final product = products[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ProductDetailScreen(product: product),
+                      ),
+                    ),
+                    child: _ProductCard(
+                      product: product,
+                      l: l,
+                      inCart: _cart.contains(i),
+                      onAddToCart: () => setState(() {
+                        if (_cart.contains(i)) {
+                          _cart.remove(i);
+                        } else {
+                          _cart.add(i);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                l.isArabic
+                                    ? 'تمت الإضافة إلى السلة'
+                                    : 'Added to cart',
+                                style: GoogleFonts.cairo(),
+                              ),
+                              backgroundColor: AppColors.brown700,
+                              margin: const EdgeInsets.all(16),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      }),
+                    ),
+                  );
+                },
+                childCount: products.length,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // ── Hero Banner ────────────────────────────────────────────────────────────
   Widget _buildHeroBanner(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
-        height: 180,
+        height: 170,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: const Color(0xFF1A0A00),
@@ -242,7 +282,6 @@ class _MarketScreenState extends State<MarketScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background image
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Image.asset(
@@ -250,7 +289,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 fit: BoxFit.cover,
                 colorBlendMode: BlendMode.darken,
                 color: Colors.black.withValues(alpha: 0.45),
-                errorBuilder: (_, _, _) => Container(
+                errorBuilder: (context, error, stack) => Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     gradient: const LinearGradient(
@@ -262,15 +301,12 @@ class _MarketScreenState extends State<MarketScreen> {
                 ),
               ),
             ),
-            // Text overlay
             Positioned(
               bottom: 20,
-              right: localeProvider.isArabic ? 20 : null,
-              left: localeProvider.isArabic ? null : 20,
+              left: 20,
+              right: 20,
               child: Column(
-                crossAxisAlignment: localeProvider.isArabic
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -294,7 +330,7 @@ class _MarketScreenState extends State<MarketScreen> {
                   Text(
                     l.sukkariMofatall,
                     style: GoogleFonts.cairo(
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -304,7 +340,7 @@ class _MarketScreenState extends State<MarketScreen> {
                         ? 'قطاف الموسم الجديد من مزارع القصيم'
                         : 'New season harvest from Qassim',
                     style: GoogleFonts.cairo(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
@@ -316,85 +352,51 @@ class _MarketScreenState extends State<MarketScreen> {
       ),
     );
   }
+}
 
-  // ── Section Header ─────────────────────────────────────────────────────────
-  Widget _buildSectionHeader(AppLocalizations l) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+// ── Market Header (gradient, matches Profile/ManageProfile) ───────────────────
+
+class _MarketHeader extends StatelessWidget {
+  final AppLocalizations l;
+  const _MarketHeader({required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.brown900, AppColors.brown700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(20, topPad + 14, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.isArabic ? 'أحدث المنتجات' : 'Newest Products',
+            l.market,
             style: GoogleFonts.cairo(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.brown900,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              height: 1.15,
             ),
           ),
-          TextButton(
-            onPressed: () {},
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey.shade500,
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              l.isArabic ? 'عرض الكل' : 'View All',
-              style: GoogleFonts.cairo(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+          const SizedBox(height: 4),
+          Text(
+            l.isArabic
+                ? 'اكتشف أجود أصناف التمور من أفضل المزارع'
+                : 'Discover premium dates from the finest farms',
+            style: GoogleFonts.cairo(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ── Product Grid ───────────────────────────────────────────────────────────
-  Widget _buildProductGrid(AppLocalizations l) {
-    final products = _filtered(l);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 14,
-          mainAxisSpacing: 14,
-          childAspectRatio: 0.85,
-        ),
-        itemCount: products.length,
-        itemBuilder: (context, i) => _ProductCard(
-          product: products[i],
-          l: l,
-          inCart: _cart.contains(i),
-          onAddToCart: () => setState(() {
-            if (_cart.contains(i)) {
-              _cart.remove(i);
-            } else {
-              _cart.add(i);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    l.isArabic ? 'تمت الإضافة إلى السلة' : 'Added to cart',
-                    style: GoogleFonts.cairo(),
-                  ),
-                  backgroundColor: AppColors.brown700,
-                  margin: const EdgeInsets.all(16),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            }
-          }),
-        ),
       ),
     );
   }
@@ -431,21 +433,20 @@ class _ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image + verified badge
+          // ── Image + overlays ─────────────────────────────────────────────
           Expanded(
             flex: 5,
             child: Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
-                  ),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                   child: Image.asset(
                     product.imagePath,
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
+                    errorBuilder: (context, error, stack) => Container(
                       color: const Color(0xFF2A3A3A),
                       child: const Icon(
                         Icons.eco_rounded,
@@ -462,8 +463,8 @@ class _ProductCard extends StatelessWidget {
                     left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 7,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.verifiedGreen,
@@ -475,13 +476,13 @@ class _ProductCard extends StatelessWidget {
                           const Icon(
                             Icons.verified_rounded,
                             color: Colors.white,
-                            size: 12,
+                            size: 11,
                           ),
                           const SizedBox(width: 3),
                           Text(
-                            l.isArabic ? 'بائع موثوق' : 'Verified',
+                            l.isArabic ? 'موثق' : 'Verified',
                             style: GoogleFonts.cairo(
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),
@@ -490,119 +491,103 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                // Heart button
+                // Reactive heart button via favoritesNotifier
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 6,
+                  child: ValueListenableBuilder<Set<String>>(
+                    valueListenable: favoritesNotifier,
+                    builder: (context, favorites, child) {
+                      final isFav = favorites.contains(product.id);
+                      return GestureDetector(
+                        onTap: () => favoritesNotifier.toggle(product.id),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 6,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            isFav
+                                ? Icons.favorite_rounded
+                                : Icons.favorite_border_rounded,
+                            color: isFav
+                                ? Colors.red.shade400
+                                : Colors.grey.shade400,
+                            size: 16,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.favorite_border_rounded,
-                      color: Colors.grey,
-                      size: 16,
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],
             ),
           ),
-          // Info
+          // ── Info ─────────────────────────────────────────────────────────
           Expanded(
             flex: 4,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Name
                   Text(
                     product.nameGetter(l),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: localeProvider.isArabic
-                        ? TextAlign.right
-                        : TextAlign.left,
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                       color: AppColors.brown900,
                     ),
                   ),
-                  // Rating
+                  // Rating row
                   Row(
-                    mainAxisAlignment: localeProvider.isArabic
-                        ? MainAxisAlignment.end
-                        : MainAxisAlignment.start,
                     children: [
+                      const Icon(Icons.star_rounded,
+                          color: AppColors.gold, size: 13),
+                      const SizedBox(width: 3),
                       Text(
-                        l.isArabic
-                            ? '(${product.reviews} تقييم)'
-                            : '(${product.reviews} reviews)',
-                        style: GoogleFonts.cairo(
-                          fontSize: 10,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        product.rating.toString(),
+                        product.rating.toStringAsFixed(1),
                         style: GoogleFonts.cairo(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppColors.brown900,
                         ),
                       ),
-                      const SizedBox(width: 2),
-                      const Icon(
-                        Icons.star_rounded,
-                        color: AppColors.gold,
-                        size: 14,
+                      const SizedBox(width: 3),
+                      Text(
+                        '(${product.reviews})',
+                        style: GoogleFonts.cairo(
+                          fontSize: 10,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
-                  // Price + Cart
+                  // Price + cart button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        onTap: onAddToCart,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: inCart ? AppColors.gold : AppColors.brown900,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            inCart
-                                ? Icons.check_rounded
-                                : Icons.add_shopping_cart_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             l.isArabic
                                 ? 'ر.س ${product.price.toStringAsFixed(0)}'
                                 : 'SAR ${product.price.toStringAsFixed(0)}',
                             style: GoogleFonts.cairo(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppColors.brown900,
                             ),
@@ -615,6 +600,26 @@ class _ProductCard extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                      GestureDetector(
+                        onTap: onAddToCart,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color:
+                                inCart ? AppColors.gold : AppColors.brown900,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            inCart
+                                ? Icons.check_rounded
+                                : Icons.add_shopping_cart_rounded,
+                            color: Colors.white,
+                            size: 17,
+                          ),
+                        ),
                       ),
                     ],
                   ),

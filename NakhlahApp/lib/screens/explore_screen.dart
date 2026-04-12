@@ -5,6 +5,8 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../models/date_model.dart';
 import '../repositories/date_repository.dart';
+import '../repositories/product_repository.dart';
+import 'product_detail_screen.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class ExploreScreen extends StatefulWidget {
@@ -214,119 +216,133 @@ class _GridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brown900.withValues(alpha: 0.07),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          Expanded(
-            flex: 5,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(18),
-              ),
-              child: Image.asset(
-                variety.imagePath,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: const Color(0xFF2A3A3A),
-                  child: const Icon(
-                    Icons.eco_rounded,
-                    color: Colors.white54,
-                    size: 40,
+    return GestureDetector(
+      // Look up the matching Product by tag (same string as variety.tag)
+      // so we can pass full product data to ProductDetailScreen.
+      onTap: () {
+        final product = ProductRepository().getById(variety.tag);
+        if (product != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProductDetailScreen(product: product),
+            ),
+          );
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brown900.withValues(alpha: 0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            Expanded(
+              flex: 5,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(18),
+                ),
+                child: Image.asset(
+                  variety.imagePath,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => Container(
+                    color: const Color(0xFF2A3A3A),
+                    child: const Icon(
+                      Icons.eco_rounded,
+                      color: Colors.white54,
+                      size: 40,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          // Info
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    variety.nameGetter(l),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: AppColors.brown900,
+            // Info
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      variety.nameGetter(l),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.brown900,
+                      ),
                     ),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 12,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          variety.originGetter(l),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            color: Colors.grey.shade500,
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            variety.originGetter(l),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${variety.kcal} ${l.kcalLabel}',
-                          style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.goldDark,
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${variety.kcal} ${l.kcalLabel}',
+                            style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.goldDark,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        '\$${variety.price.toStringAsFixed(2)}',
-                        style: GoogleFonts.cairo(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.brown900,
+                        Text(
+                          '\$${variety.price.toStringAsFixed(2)}',
+                          style: GoogleFonts.cairo(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.brown900,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -340,110 +356,123 @@ class _ListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardWhite,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brown900.withValues(alpha: 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(16),
+    return GestureDetector(
+      // Same tag-based lookup used by _GridCard
+      onTap: () {
+        final product = ProductRepository().getById(variety.tag);
+        if (product != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProductDetailScreen(product: product),
             ),
-            child: Image.asset(
-              variety.imagePath,
-              width: 100,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
+          );
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brown900.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(16),
+              ),
+              child: Image.asset(
+                variety.imagePath,
                 width: 100,
-                color: const Color(0xFF2A3A3A),
-                child: const Icon(
-                  Icons.eco_rounded,
-                  color: Colors.white54,
-                  size: 36,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stack) => Container(
+                  width: 100,
+                  color: const Color(0xFF2A3A3A),
+                  child: const Icon(
+                    Icons.eco_rounded,
+                    color: Colors.white54,
+                    size: 36,
+                  ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    variety.nameGetter(l),
-                    style: GoogleFonts.cairo(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: AppColors.brown900,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      variety.nameGetter(l),
+                      style: GoogleFonts.cairo(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: AppColors.brown900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 13,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        variety.originGetter(l),
-                        style: GoogleFonts.cairo(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 13,
+                          color: Colors.grey,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${variety.kcal} ${l.kcalLabel}',
+                        const SizedBox(width: 2),
+                        Text(
+                          variety.originGetter(l),
                           style: GoogleFonts.cairo(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.goldDark,
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
                           ),
                         ),
-                      ),
-                      Text(
-                        '\$${variety.price.toStringAsFixed(2)}',
-                        style: GoogleFonts.cairo(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.brown900,
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${variety.kcal} ${l.kcalLabel}',
+                            style: GoogleFonts.cairo(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.goldDark,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        Text(
+                          '\$${variety.price.toStringAsFixed(2)}',
+                          style: GoogleFonts.cairo(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.brown900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

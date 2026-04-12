@@ -1,219 +1,402 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 
-class DateDetailScreen extends StatelessWidget {
-  const DateDetailScreen({super.key});
+import '../l10n/app_localizations.dart';
+import '../models/scan_result.dart';
+import '../providers/locale_provider.dart';
+import '../theme/app_colors.dart';
+import 'market_screen.dart' as market;
+
+/// Displays the classification result returned by the AI model.
+///
+/// Receives a fully-populated [ScanResult] — no network calls happen here.
+/// All strings come from [AppLocalizations] so the page respects the app's
+/// current language.
+class ScanResultScreen extends StatelessWidget {
+  final ScanResult result;
+
+  const ScanResultScreen({super.key, required this.result});
+
+  // ── Share ──────────────────────────────────────────────────────────────────
+
+  Future<void> _share(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final isAr = localeProvider.isArabic;
+    final text = l.shareText(
+      result.localizedName(isAr),
+      result.localizedOrigin(isAr),
+      result.confidencePercent,
+    );
+    await Share.share(text);
+  }
+
+  // ── Navigation helpers ────────────────────────────────────────────────────
+
+  void _goToMarket(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const market.MarketScreen()),
+    );
+  }
+
+  void _scanAgain(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(
-        0xFFFBF9F6,
-      ), // Off-white background from image
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Scan Result',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        actions: const [
-          Icon(Icons.more_vert, color: Colors.black87),
-          SizedBox(width: 16),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Main Product Image Card ---
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1590004953392-5aba2e72269a?q=80&w=1000', // Placeholder Medjool
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.verified, size: 16, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          "98% Confidence",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+    final l = AppLocalizations.of(context);
+    final isAr = localeProvider.isArabic;
 
-            // --- Title Section ---
-            const Text(
-              'Medjool Date',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF5D4037),
-              ),
+    return Directionality(
+      textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFBF9F6),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(
+              isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
+              color: AppColors.brown700,
+              size: 20,
             ),
-            const Text(
-              'تمر المجدول',
-              style: TextStyle(
-                fontSize: 24,
-                color: Color(0xFFA1887F),
-                fontWeight: FontWeight.w500,
-              ),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(
+            l.scanResult,
+            style: GoogleFonts.cairo(
+              color: AppColors.brown900,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
             ),
-            const SizedBox(height: 20),
-
-            // --- Origin Card ---
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: Color(0xFF5D4037),
-                              size: 18,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              "Origin",
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "Al Madinah, Saudi Arabia",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        // Verified Badge
-                        _SmallBadge(text: "VERIFIED ORIGIN"),
-                      ],
-                    ),
-                  ),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      'https://maps.googleapis.com/maps/api/staticmap?center=24.4673,39.6068&zoom=10&size=100x100&key=YOUR_KEY', // Static Map Placeholder
-                      width: 80,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        color: Colors.grey[200],
-                        width: 80,
-                        height: 60,
-                        child: const Icon(Icons.map),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.share_outlined, color: AppColors.brown700),
+              onPressed: () => _share(context),
+              tooltip: l.shareResults,
             ),
-            const SizedBox(height: 24),
-
-            // --- Nutrition Grid ---
-            const Text(
-              "NUTRITION PER 100 G",
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              childAspectRatio: 2.2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              children: const [
-                _NutrientCard(label: "CALORIES", value: "277", unit: "kcal"),
-                _NutrientCard(label: "CARBS", value: "75", unit: "g"),
-                _NutrientCard(label: "FIBER", value: "7", unit: "g"),
-                _NutrientCard(label: "POTASSIUM", value: "696", unit: "mg"),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            // --- Find Sellers Button ---
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.shopping_bag_outlined,
-                  color: Colors.white,
-                ),
-                label: const Text(
-                  "Find Sellers",
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D4037),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
           ],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                _HeroCard(result: result, l: l),
+                const SizedBox(height: 20),
+                Text(
+                  result.nameEn,
+                  style: GoogleFonts.cairo(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.brown700,
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  result.nameAr,
+                  style: GoogleFonts.cairo(
+                    fontSize: 20,
+                    color: const Color(0xFFA1887F),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _OriginCard(result: result, l: l, isAr: isAr),
+                const SizedBox(height: 24),
+                Text(
+                  l.nutritionPer100g,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _NutritionGrid(result: result, l: l),
+                const SizedBox(height: 32),
+                _ActionButtons(
+                  l: l,
+                  onFindSellers: () => _goToMarket(context),
+                  onShare: () => _share(context),
+                  onScanAgain: () => _scanAgain(context),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-// Helper: Nutrient Info Cards
+// ── Hero image card ───────────────────────────────────────────────────────────
+
+class _HeroCard extends StatelessWidget {
+  final ScanResult result;
+  final AppLocalizations l;
+
+  const _HeroCard({required this.result, required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: result.imageUrl != null
+              ? Image.network(
+                  result.imageUrl!,
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => _fallbackImage(),
+                )
+              : _fallbackImage(),
+        ),
+        Positioned(
+          top: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.brown900.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.verified_rounded, size: 15, color: AppColors.goldBadge),
+                const SizedBox(width: 5),
+                Text(
+                  '${result.confidencePercent} ${l.confidence}',
+                  style: GoogleFonts.cairo(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _fallbackImage() {
+    return Container(
+      height: 220,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          colors: [AppColors.brown900, AppColors.brown700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.eco_rounded, color: Colors.white38, size: 72),
+      ),
+    );
+  }
+}
+
+// ── Origin card ───────────────────────────────────────────────────────────────
+
+class _OriginCard extends StatelessWidget {
+  final ScanResult result;
+  final AppLocalizations l;
+  final bool isAr;
+
+  const _OriginCard({
+    required this.result,
+    required this.l,
+    required this.isAr,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.brown900.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded, color: AppColors.brown700, size: 16),
+                    const SizedBox(width: 4),
+                    Text(l.origin, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  result.localizedOrigin(isAr),
+                  style: GoogleFonts.cairo(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: AppColors.brown900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _VerifiedBadge(label: l.verifiedOrigin),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.brown100,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.map_outlined, color: AppColors.brown700, size: 32),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Nutrition grid ────────────────────────────────────────────────────────────
+
+class _NutritionGrid extends StatelessWidget {
+  final ScanResult result;
+  final AppLocalizations l;
+
+  const _NutritionGrid({required this.result, required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      childAspectRatio: 2.2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      children: [
+        _NutrientCard(label: l.caloriesLabel,  value: '${result.calories}',  unit: 'kcal'),
+        _NutrientCard(label: l.carbsLabel,     value: '${result.carbs}',     unit: 'g'),
+        _NutrientCard(label: l.fiberLabel,     value: '${result.fiber}',     unit: 'g'),
+        _NutrientCard(label: l.potassiumLabel, value: '${result.potassium}', unit: 'mg'),
+      ],
+    );
+  }
+}
+
+// ── Action buttons ────────────────────────────────────────────────────────────
+
+class _ActionButtons extends StatelessWidget {
+  final AppLocalizations l;
+  final VoidCallback onFindSellers;
+  final VoidCallback onShare;
+  final VoidCallback onScanAgain;
+
+  const _ActionButtons({
+    required this.l,
+    required this.onFindSellers,
+    required this.onShare,
+    required this.onScanAgain,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton.icon(
+            onPressed: onFindSellers,
+            icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+            label: Text(
+              l.findSellers,
+              style: GoogleFonts.cairo(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brown700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: onShare,
+                  icon: const Icon(Icons.share_outlined, size: 18),
+                  label: Text(l.shareResults, style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.brown700,
+                    side: const BorderSide(color: AppColors.brown700, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: onScanAgain,
+                  icon: const Icon(Icons.filter_center_focus_rounded, size: 18),
+                  label: Text(l.scanAgain, style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.brown900,
+                    side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Nutrient info card ────────────────────────────────────────────────────────
+
 class _NutrientCard extends StatelessWidget {
   final String label, value, unit;
+
   const _NutrientCard({
     required this.label,
     required this.value,
@@ -237,6 +420,7 @@ class _NutrientCard extends StatelessWidget {
               fontSize: 10,
               color: Colors.grey,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.4,
             ),
           ),
           const Spacer(),
@@ -246,16 +430,14 @@ class _NutrientCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: GoogleFonts.cairo(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.brown900,
                 ),
               ),
               const SizedBox(width: 4),
-              Text(
-                unit,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              Text(unit, style: const TextStyle(fontSize: 12, color: Colors.grey)),
             ],
           ),
         ],
@@ -264,10 +446,11 @@ class _NutrientCard extends StatelessWidget {
   }
 }
 
-// Helper: Origin Badge
-class _SmallBadge extends StatelessWidget {
-  final String text;
-  const _SmallBadge({required this.text});
+// ── Verified origin badge ─────────────────────────────────────────────────────
+
+class _VerifiedBadge extends StatelessWidget {
+  final String label;
+  const _VerifiedBadge({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -275,19 +458,19 @@ class _SmallBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFEDE7E3),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user, size: 12, color: Color(0xFF5D4037)),
+          const Icon(Icons.verified_user_rounded, size: 12, color: AppColors.verifiedGreen),
           const SizedBox(width: 4),
           Text(
-            text,
+            label,
             style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF5D4037),
+              color: AppColors.verifiedGreen,
             ),
           ),
         ],
