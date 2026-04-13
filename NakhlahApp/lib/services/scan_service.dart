@@ -26,7 +26,6 @@ class ScanApiResult {
   });
 
   factory ScanApiResult.fromJson(Map<String, dynamic> j) {
-    // ✅ Safe parsing with fallbacks — prevents crashes on unexpected response
     return ScanApiResult(
       label: _str(j, 'label'),
       nameAr: _str(j, 'nameAr'),
@@ -42,33 +41,25 @@ class ScanApiResult {
 
   static String _str(Map<String, dynamic> j, String key) =>
       (j[key] as String?) ?? '';
-
   static double _dbl(Map<String, dynamic> j, String key) =>
       (j[key] as num?)?.toDouble() ?? 0.0;
-
   static int _int(Map<String, dynamic> j, String key) =>
       (j[key] as num?)?.toInt() ?? 0;
 }
 
 class ScanService {
-  // ✅ SECURITY FIX: API key and base URL come from --dart-define at build time.
-  // Never hardcode secrets in source code.
-  //
-  // Build command:
-  //   flutter run --dart-define=API_BASE_URL=https://nakhlah-1.onrender.com \
-  //               --dart-define=API_KEY=your-key-here
-  //
-  // For CI/CD (GitHub Actions, etc.) store these as secrets and pass via --dart-define.
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://nakhlah-1.onrender.com',
   );
+
+  // The actual API key configured on Render.
+  // Override at build time with: --dart-define=API_KEY=your-key
   static const String _apiKey = String.fromEnvironment(
     'API_KEY',
-    defaultValue: '', // ✅ Empty default — forces explicit key at build time
+    defaultValue: 'c2f3c3a316aa6d95cb4cd3516f674f97',
   );
 
-  /// Generous timeouts to survive Render free-tier cold starts (~60 s).
   static final _dio = Dio(
     BaseOptions(
       baseUrl: _baseUrl,
@@ -78,7 +69,7 @@ class ScanService {
     ),
   );
 
-  /// Fire-and-forget warmup. Call once at app start to reduce cold-start latency.
+  /// Fire-and-forget warmup to reduce cold-start latency.
   static Future<void> warmup() async {
     try {
       await _dio.get<dynamic>(
@@ -88,15 +79,11 @@ class ScanService {
           sendTimeout: const Duration(seconds: 10),
         ),
       );
-    } catch (_) {
-      // Intentionally ignored — warmup failure must never block the UI.
-    }
+    } catch (_) {}
   }
 
   /// Sends [imageFile] to POST /predict and returns a [ScanApiResult].
-  ///
-  /// Retries once on timeout (handles cold-start case).
-  /// Throws [ScanServiceException] on unrecoverable errors.
+  /// Retries once on timeout to handle cold-start.
   static Future<ScanApiResult> classify(File imageFile) async {
     return _classifyWithRetry(imageFile, retries: 1);
   }
@@ -117,14 +104,11 @@ class ScanService {
 
       if (response.statusCode == 200) {
         final data = response.data;
-
-        // Guard: reject non-map responses (e.g. HTML error pages from Render)
         if (data is! Map<String, dynamic>) {
           throw ScanServiceException(
             'Unexpected response from server. Please try again.',
           );
         }
-
         return ScanApiResult.fromJson(data);
       }
 
@@ -135,7 +119,6 @@ class ScanService {
           e.type == DioExceptionType.sendTimeout ||
           e.type == DioExceptionType.receiveTimeout;
 
-      // Retry once on timeout — server may have been cold-starting
       if (isTimeout && retries > 0) {
         return _classifyWithRetry(imageFile, retries: retries - 1);
       }
@@ -154,7 +137,7 @@ class ScanService {
         return 'Could not reach the server. Check your internet connection.';
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Server is taking too long. It may be waking up — please try again.';
+        return 'Server is waking up — please try again in a moment.';
       case DioExceptionType.badResponse:
         final code = e.response?.statusCode;
         final detail = _extractDetail(e.response?.data);
