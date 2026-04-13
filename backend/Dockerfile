@@ -23,24 +23,29 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-# ── Download model weights at build time ────────────────────────────────────
-# Replace the URL below with your actual Hugging Face / Google Drive link.
-# The file lands at /app/models/nakhlah_model.pth inside the container.
-# Build arg lets you override the URL without editing this file:
+# ── Download model weights at build time ─────────────────────────────────────
+# IMPORTANT: Always use /resolve/ URL (not /blob/) to get the raw file.
+# /blob/ returns an HTML page → corrupted model file.
+#
+# Default URL points to HuggingFace raw file. Override with --build-arg:
 #   docker build --build-arg MODEL_URL=https://... .
-ARG MODEL_URL
+ARG MODEL_URL=https://huggingface.co/benfatah/NAKHLAH/resolve/main/nakhlah_robust_v1_best.pth
+
 RUN mkdir -p /app/models && \
-    if [ -n "$MODEL_URL" ]; then \
-        echo "Downloading model from $MODEL_URL ..." && \
-        wget -q --show-progress -O /app/models/nakhlah_model.pth "$MODEL_URL" && \
-        echo "Model downloaded: $(du -sh /app/models/nakhlah_model.pth)"; \
-    else \
-        echo "WARNING: MODEL_URL build arg not set. Model not bundled." && \
-        echo "Set MODEL_URL on Render Build & Deploy settings."; \
-    fi
+    echo "Downloading model from: $MODEL_URL" && \
+    wget -q --show-progress \
+         --header="User-Agent: Mozilla/5.0" \
+         -O /app/models/nakhlah_robust_v1_best.pth \
+         "$MODEL_URL" && \
+    # Verify file is not HTML (corrupted download guard)
+    if file /app/models/nakhlah_robust_v1_best.pth | grep -q "HTML"; then \
+        echo "ERROR: Downloaded file is HTML — wrong URL used!" && exit 1; \
+    fi && \
+    echo "Model downloaded successfully: $(du -sh /app/models/nakhlah_robust_v1_best.pth)"
 
 ENV PYTHONUNBUFFERED=1
-ENV MODEL_PATH=/app/models/nakhlah_model.pth
+# ✅ Correct path matching the actual filename
+ENV MODEL_PATH=/app/models/nakhlah_robust_v1_best.pth
 
 EXPOSE 10000
 

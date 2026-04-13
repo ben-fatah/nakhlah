@@ -3,14 +3,15 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    # Path where the .pth model file lives INSIDE the container.
-    # The Dockerfile downloads it to /app/models/nakhlah_model.pth at build time.
-    # Override with MODEL_PATH on the Render environment variables dashboard.
-    MODEL_PATH: str = "/app/models/nakhlah_model.pth"
+    # ✅ FIXED: Correct filename matching what Dockerfile downloads
+    MODEL_PATH: str = "/app/models/nakhlah_robust_v1_best.pth"
     MODEL_IMG_SIZE: int = 260
     NUM_CLASSES: int = 9
 
-    API_KEY: str = "change-me-in-prod"
+    # ✅ SECURITY FIX: No default value — must be set via environment variable.
+    # On Render: set API_KEY in the Environment Variables dashboard.
+    # Locally: add to .env file (never commit .env).
+    API_KEY: str
     API_KEY_HEADER: str = "X-API-Key"
 
     MAX_IMAGE_MB: int = 5

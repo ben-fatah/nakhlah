@@ -1,0 +1,4 @@
+# This file keeps the models/ directory in git.
+# The actual .pth model file is NOT committed — it is downloaded
+# automatically by the Dockerfile at build time from HuggingFace.
+# See: https://huggingface.co/benfatah/NAKHLAH/resolve/main/nakhlah_robust_v1_best.pth

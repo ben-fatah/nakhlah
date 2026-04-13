@@ -6,6 +6,7 @@ secrets/
 .env
 .env.*
 *.env
+# ⚠️ .env.example IS committed — it's a safe template with no real values
 
 # ==============================
 # 🐍 Python
@@ -34,26 +35,30 @@ datasets/
 
 # ==============================
 # 🤖 Models / Checkpoints
+# WHY models are NOT pushed to git:
+#   - .pth files are hundreds of MB → bloats repo, breaks GitHub push limits
+#   - Git is for code, not binary weights
+#   - Models are downloaded at Docker BUILD TIME from HuggingFace
+#   - Use HuggingFace Hub or cloud storage for model distribution
 # ==============================
 
-# ❌ تجاهل كل المودلز
+# ❌ Ignore ALL model formats everywhere
 *.pth
 *.pt
 *.onnx
 *.ckpt
+*.bin
+*.safetensors
 
-# ❌ تجاهل كل مجلدات models
+# ❌ Ignore all model directories
 models/*
 ai/models/*
 backend/models/*
 
-# ✅ اسمح بالمجلدات نفسها (مهم)
-!models/
-!ai/models/
-!backend/models/
-
-# ✅ (اختياري) اسمح بمودل واحد فقط
-!backend/models/nakhlah_robust_v1_best.pth
+# ✅ Keep the directories themselves (so git tracks the folder structure)
+!models/.gitkeep
+!ai/models/.gitkeep
+!backend/models/.gitkeep
 
 # ==============================
 # 📓 Jupyter
@@ -101,7 +106,7 @@ htmlcov/
 *.rar
 
 # ==============================
-# 📱 Flutter (IMPORTANT)
+# 📱 Flutter
 # ==============================
 .flutter-plugins
 .flutter-plugins-dependencies

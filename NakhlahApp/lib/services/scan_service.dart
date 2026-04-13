@@ -25,46 +25,60 @@ class ScanApiResult {
     required this.potassium,
   });
 
-  factory ScanApiResult.fromJson(Map<String, dynamic> j) => ScanApiResult(
-        label:      j['label'] as String,
-        nameAr:     j['nameAr'] as String,
-        confidence: (j['confidence'] as num).toDouble(),
-        originEn:   j['originEn'] as String,
-        originAr:   j['originAr'] as String,
-        calories:   (j['calories'] as num).toInt(),
-        carbs:      (j['carbs'] as num).toInt(),
-        fiber:      (j['fiber'] as num).toInt(),
-        potassium:  (j['potassium'] as num).toInt(),
-      );
+  factory ScanApiResult.fromJson(Map<String, dynamic> j) {
+    // ✅ Safe parsing with fallbacks — prevents crashes on unexpected response
+    return ScanApiResult(
+      label: _str(j, 'label'),
+      nameAr: _str(j, 'nameAr'),
+      confidence: _dbl(j, 'confidence'),
+      originEn: _str(j, 'originEn'),
+      originAr: _str(j, 'originAr'),
+      calories: _int(j, 'calories'),
+      carbs: _int(j, 'carbs'),
+      fiber: _int(j, 'fiber'),
+      potassium: _int(j, 'potassium'),
+    );
+  }
+
+  static String _str(Map<String, dynamic> j, String key) =>
+      (j[key] as String?) ?? '';
+
+  static double _dbl(Map<String, dynamic> j, String key) =>
+      (j[key] as num?)?.toDouble() ?? 0.0;
+
+  static int _int(Map<String, dynamic> j, String key) =>
+      (j[key] as num?)?.toInt() ?? 0;
 }
 
 class ScanService {
+  // ✅ SECURITY FIX: API key and base URL come from --dart-define at build time.
+  // Never hardcode secrets in source code.
+  //
+  // Build command:
+  //   flutter run --dart-define=API_BASE_URL=https://nakhlah-1.onrender.com \
+  //               --dart-define=API_KEY=your-key-here
+  //
+  // For CI/CD (GitHub Actions, etc.) store these as secrets and pass via --dart-define.
   static const String _baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://nakhlah-1.onrender.com',
   );
   static const String _apiKey = String.fromEnvironment(
     'API_KEY',
-    defaultValue: 'c2f3c3a316aa6d95cb4cd3516f674f97',
+    defaultValue: '', // ✅ Empty default — forces explicit key at build time
   );
 
-  /// Generous timeouts to survive Render free-tier cold starts.
-  /// Cold start: server wakes up + loads ~200 MB model = up to 60 s.
-  /// Inference itself is fast (~1–2 s on CPU) once warm.
+  /// Generous timeouts to survive Render free-tier cold starts (~60 s).
   static final _dio = Dio(
     BaseOptions(
-      baseUrl:        _baseUrl,
+      baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 90),
       headers: {'X-API-Key': _apiKey},
     ),
   );
 
-  /// Fire-and-forget warmup.  Call this once when the app starts
-  /// (e.g. in main() after Firebase init) so the Render instance wakes
-  /// up before the user taps Scan.
-  ///
-  /// Errors are swallowed — warmup failure must never block the UI.
+  /// Fire-and-forget warmup. Call once at app start to reduce cold-start latency.
   static Future<void> warmup() async {
     try {
       await _dio.get<dynamic>(
@@ -75,15 +89,14 @@ class ScanService {
         ),
       );
     } catch (_) {
-      // Intentionally ignored — this is a best-effort pre-warm.
+      // Intentionally ignored — warmup failure must never block the UI.
     }
   }
 
-  /// Sends [imageFile] to the API and returns a [ScanApiResult].
+  /// Sends [imageFile] to POST /predict and returns a [ScanApiResult].
   ///
-  /// Retries once on timeout (covers the case where warmup was not called
-  /// and the server is still booting on the first attempt).
-  /// Throws [ScanServiceException] on any unrecoverable error.
+  /// Retries once on timeout (handles cold-start case).
+  /// Throws [ScanServiceException] on unrecoverable errors.
   static Future<ScanApiResult> classify(File imageFile) async {
     return _classifyWithRetry(imageFile, retries: 1);
   }
@@ -100,33 +113,30 @@ class ScanService {
         ),
       });
 
-      final response = await _dio.post<dynamic>(
-        '/predict',
-        data: formData,
-      );
+      final response = await _dio.post<dynamic>('/predict', data: formData);
 
       if (response.statusCode == 200) {
         final data = response.data;
-        // Guard against non-map responses (e.g. HTML error pages)
+
+        // Guard: reject non-map responses (e.g. HTML error pages from Render)
         if (data is! Map<String, dynamic>) {
           throw ScanServiceException(
-            'Unexpected response format from server. Please try again.',
+            'Unexpected response from server. Please try again.',
           );
         }
+
         return ScanApiResult.fromJson(data);
       }
 
-      throw ScanServiceException(
-        'Unexpected status ${response.statusCode}',
-      );
+      throw ScanServiceException('Server error (${response.statusCode}).');
     } on DioException catch (e) {
-      final isTimeout = e.type == DioExceptionType.connectionTimeout ||
+      final isTimeout =
+          e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.sendTimeout ||
           e.type == DioExceptionType.receiveTimeout;
 
+      // Retry once on timeout — server may have been cold-starting
       if (isTimeout && retries > 0) {
-        // The server was cold-starting. Give it another try with a longer
-        // window — by now it should be up.
         return _classifyWithRetry(imageFile, retries: retries - 1);
       }
 
@@ -144,10 +154,9 @@ class ScanService {
         return 'Could not reach the server. Check your internet connection.';
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Server is taking too long to respond. The server may be '
-            'waking up — please try again in a moment.';
+        return 'Server is taking too long. It may be waking up — please try again.';
       case DioExceptionType.badResponse:
-        final code   = e.response?.statusCode;
+        final code = e.response?.statusCode;
         final detail = _extractDetail(e.response?.data);
         if (code == 401) return 'Authentication failed. Contact support.';
         if (code == 413) return 'Image is too large (max 5 MB).';
@@ -161,9 +170,6 @@ class ScanService {
     }
   }
 
-  /// Safely extracts the "detail" field from an error response body,
-  /// handling both Map<String,dynamic> and plain String bodies
-  /// (e.g. Render sometimes returns HTML on gateway errors).
   static String _extractDetail(dynamic data) {
     if (data is Map<String, dynamic>) {
       return data['detail']?.toString() ?? 'Unknown error';

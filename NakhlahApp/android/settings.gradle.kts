@@ -1,3 +1,5 @@
+rootProject.name = "NakhlahAppAndroid"
+
 pluginManagement {
     val flutterSdkPath =
         run {
