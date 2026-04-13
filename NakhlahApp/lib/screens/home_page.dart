@@ -175,7 +175,7 @@ class _HomeContentState extends State<_HomeContent>
             // ── Recent scans from scanHistoryNotifier (live) ──────────────
             ValueListenableBuilder<List<ScanHistoryEntry>>(
               valueListenable: scanHistoryNotifier,
-              builder: (_, scans, __) {
+              builder: (_, scans, _) {
                 final recent = scans.take(5).toList();
                 if (recent.isEmpty) {
                   return Padding(
@@ -563,7 +563,7 @@ class _ScanHistoryCard extends StatelessWidget {
                       height: 110,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         height: 110,
                         color: const Color(0xFF2A3A3A),
                         child: const Icon(

@@ -31,7 +31,7 @@ class HistoryScreen extends StatelessWidget {
                   return ListView.separated(
                     padding: const EdgeInsets.all(20),
                     itemCount: scans.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, i) =>
                         _ScanHistoryCard(entry: scans[i], l: l, isAr: isAr),
                   );
@@ -91,7 +91,7 @@ class _HistoryHeader extends StatelessWidget {
                 ),
                 ValueListenableBuilder<List<ScanHistoryEntry>>(
                   valueListenable: scanHistoryNotifier,
-                  builder: (_, scans, __) => Text(
+                  builder: (_, scans, _) => Text(
                     l.isArabic
                         ? '${scans.length} عملية مسح'
                         : '${scans.length} scan${scans.length == 1 ? '' : 's'}',
@@ -107,7 +107,7 @@ class _HistoryHeader extends StatelessWidget {
           // Clear all
           ValueListenableBuilder<List<ScanHistoryEntry>>(
             valueListenable: scanHistoryNotifier,
-            builder: (_, scans, __) {
+            builder: (_, scans, _) {
               if (scans.isEmpty) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () => _showClearDialog(context, l),
@@ -234,7 +234,7 @@ class _ScanHistoryCard extends StatelessWidget {
                         width: 64,
                         height: 64,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _fallback(),
+                        errorBuilder: (_, _, _) => _fallback(),
                       )
                     : _fallback(),
               ),

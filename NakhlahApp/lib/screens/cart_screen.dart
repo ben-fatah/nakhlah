@@ -33,7 +33,7 @@ class CartScreen extends StatelessWidget {
                         child: ListView.separated(
                           padding: const EdgeInsets.all(20),
                           itemCount: items.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, i) =>
                               _CartItemCard(item: items[i], l: l),
@@ -98,7 +98,7 @@ class _CartHeader extends StatelessWidget {
                 ),
                 ValueListenableBuilder<List<CartItem>>(
                   valueListenable: cartNotifier,
-                  builder: (_, items, __) {
+                  builder: (_, items, _) {
                     final total = items.fold(0, (s, i) => s + i.quantity);
                     return Text(
                       l.isArabic
@@ -117,7 +117,7 @@ class _CartHeader extends StatelessWidget {
           // Clear all button
           ValueListenableBuilder<List<CartItem>>(
             valueListenable: cartNotifier,
-            builder: (_, items, __) {
+            builder: (_, items, _) {
               if (items.isEmpty) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () => _showClearDialog(context, l),
@@ -207,7 +207,7 @@ class _CartItemCard extends StatelessWidget {
               width: 70,
               height: 70,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (_, _, _) => Container(
                 width: 70,
                 height: 70,
                 color: AppColors.brown100,
@@ -298,7 +298,7 @@ class _QuantityControl extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<List<CartItem>>(
       valueListenable: cartNotifier,
-      builder: (_, items, __) {
+      builder: (_, items, _) {
         final qty = cartNotifier.quantityOf(productId);
         return Row(
           children: [

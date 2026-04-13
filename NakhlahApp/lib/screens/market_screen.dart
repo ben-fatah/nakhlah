@@ -351,7 +351,7 @@ class _MarketHeader extends StatelessWidget {
           // Cart icon with badge
           ValueListenableBuilder<List<CartItem>>(
             valueListenable: cartNotifier,
-            builder: (_, items, __) {
+            builder: (_, items, _) {
               final count = items.fold(0, (s, i) => s + i.quantity);
               return GestureDetector(
                 onTap: () => Navigator.of(
@@ -443,7 +443,7 @@ class _ProductCard extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       color: const Color(0xFF2A3A3A),
                       child: const Icon(
                         Icons.eco_rounded,
@@ -494,7 +494,7 @@ class _ProductCard extends StatelessWidget {
                   right: 8,
                   child: ValueListenableBuilder<Set<String>>(
                     valueListenable: favoritesNotifier,
-                    builder: (_, favorites, __) {
+                    builder: (_, favorites, _) {
                       final isFav = favorites.contains(product.id);
                       return GestureDetector(
                         onTap: () => favoritesNotifier.toggle(product.id),
@@ -600,7 +600,7 @@ class _ProductCard extends StatelessWidget {
                       // Cart add button — reactive via ValueListenableBuilder
                       ValueListenableBuilder<List<CartItem>>(
                         valueListenable: cartNotifier,
-                        builder: (_, __, ___) {
+                        builder: (_, _, _) {
                           final inCart = cartNotifier.contains(product.id);
                           return GestureDetector(
                             onTap: () {

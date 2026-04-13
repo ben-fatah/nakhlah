@@ -408,7 +408,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                         ? Image.network(
                             _photoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
+                            errorBuilder: (_, _, _) => Center(
                               child: Text(
                                 _userInitial,
                                 style: GoogleFonts.cairo(
@@ -632,7 +632,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         Expanded(
           child: ValueListenableBuilder<List<ScanHistoryEntry>>(
             valueListenable: scanHistoryNotifier,
-            builder: (_, scans, __) => _StatCard(
+            builder: (_, scans, _) => _StatCard(
               icon: Icons.camera_alt_outlined,
               value: scans.length.toString(),
               label: l.datesScanned,
@@ -647,7 +647,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         Expanded(
           child: ValueListenableBuilder<Set<String>>(
             valueListenable: favoritesNotifier,
-            builder: (_, favorites, __) => _StatCard(
+            builder: (_, favorites, _) => _StatCard(
               icon: Icons.favorite_outline_rounded,
               value: favorites.length.toString(),
               label: l.savedFavorites,
