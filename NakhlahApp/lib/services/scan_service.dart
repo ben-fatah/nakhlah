@@ -1,5 +1,11 @@
+// ⚠️  DEPRECATED — No longer used for scan inference.
+// The app now uses [LocalInferenceService] (ONNX, fully offline).
+// This file is kept for reference only. Backend remains alive for
+// future analytics / admin endpoints but is NOT called during scans.
+// ignore_for_file: unused_element
 import 'dart:io';
 import 'package:dio/dio.dart';
+
 
 /// Response from POST /predict
 class ScanApiResult {

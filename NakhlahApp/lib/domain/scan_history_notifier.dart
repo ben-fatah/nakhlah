@@ -117,4 +117,42 @@ class ScanHistoryNotifier extends ValueNotifier<List<ScanHistoryEntry>> {
     value = [];
     _persist();
   }
+
+  /// Update the [imageUrl] of an existing entry once Firebase upload completes.
+  void updateImageUrl(String id, String url) {
+    value = value.map((e) {
+      if (e.id != id) return e;
+      return ScanHistoryEntry(
+        id:         e.id,
+        nameEn:     e.nameEn,
+        nameAr:     e.nameAr,
+        originEn:   e.originEn,
+        originAr:   e.originAr,
+        confidence: e.confidence,
+        calories:   e.calories,
+        carbs:      e.carbs,
+        fiber:      e.fiber,
+        potassium:  e.potassium,
+        imageUrl:   url,
+        imagePath:  e.imagePath,
+        scannedAt:  e.scannedAt,
+      );
+    }).toList();
+    _persist();
+  }
+
+  /// Merge cloud entries that are not already in the local list.
+  /// Inserts them in chronological order (newest first).
+  void mergeFromCloud(List<ScanHistoryEntry> cloudEntries) {
+    final localIds = value.map((e) => e.id).toSet();
+    final newOnes  = cloudEntries
+        .where((e) => !localIds.contains(e.id))
+        .toList()
+      ..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
+    if (newOnes.isEmpty) return;
+    final merged = [...value, ...newOnes]
+      ..sort((a, b) => b.scannedAt.compareTo(a.scannedAt));
+    value = merged;
+    _persist();
+  }
 }

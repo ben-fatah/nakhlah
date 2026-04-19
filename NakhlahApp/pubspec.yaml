@@ -1,8 +1,8 @@
 name: nakhlah
-description: "Nakhlah — AI-powered date fruit identification app."
+description: "Nakhlah — AI-powered date fruit identification app (fully offline ONNX inference)."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ^3.11.4
@@ -10,22 +10,43 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dio: ^5.7.0
+
+  # ── UI & Navigation ────────────────────────────────────────────────────────
   cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
+
+  # ── Firebase ───────────────────────────────────────────────────────────────
   firebase_core: ^4.6.0
   firebase_auth: ^6.3.0
   firebase_storage: ^13.2.0
-  google_sign_in: ^6.3.0
   cloud_firestore: ^6.2.0
-  image_picker: ^1.2.1
-  permission_handler: ^12.0.1
-  google_fonts: ^6.2.1
-  logger: ^2.5.0
-  shimmer: ^3.0.0
-  shared_preferences: ^2.2.3
+
+  # ── Auth ───────────────────────────────────────────────────────────────────
+  # google_sign_in removed — phone OTP only
+
+  # ── Networking (kept for future analytics; NOT used for inference) ─────────
+  dio: ^5.7.0
+
+  # ── Camera & Image ────────────────────────────────────────────────────────
   camera: ^0.10.5
+  image_picker: ^1.2.1
+  image: ^4.2.0                # ← NEW: image resize/crop/encode in isolate
+  permission_handler: ^12.0.1
+
+  # ── Local AI Inference (ONNX) ─────────────────────────────────────────────
+  onnxruntime: ^1.4.1           # ← ONNX Runtime Flutter binding
+  path_provider: ^2.1.5         # ← extract model asset to documents dir
+
+  # ── Storage & State ───────────────────────────────────────────────────────
+  shared_preferences: ^2.2.3
+
+  # ── Utilities ─────────────────────────────────────────────────────────────
+  logger: ^2.5.0
   share_plus: ^10.1.4
-  uuid: ^4.5.1              # NEW — generates unique IDs for scan history entries
+  uuid: ^4.5.1
+
+  # ── Localisation ──────────────────────────────────────────────────────────
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.2
@@ -49,3 +70,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/models/            # ← NEW: nakhlah_v2.onnx + date_metadata.json

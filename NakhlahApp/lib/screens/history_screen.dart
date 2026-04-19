@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -225,18 +226,10 @@ class _ScanHistoryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Image
+              // Image — priority: network URL > local file > fallback
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: entry.imagePath.isNotEmpty
-                    ? Image.asset(
-                        entry.imagePath,
-                        width: 64,
-                        height: 64,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _fallback(),
-                      )
-                    : _fallback(),
+                child: _buildEntryImage(entry),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -314,6 +307,33 @@ class _ScanHistoryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildEntryImage(ScanHistoryEntry entry) {
+    // 1. Firebase Storage URL (persists cross-device)
+    if (entry.imageUrl != null && entry.imageUrl!.isNotEmpty) {
+      return Image.network(
+        entry.imageUrl!,
+        width: 64, height: 64, fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _localOrFallback(entry),
+      );
+    }
+    return _localOrFallback(entry);
+  }
+
+  Widget _localOrFallback(ScanHistoryEntry entry) {
+    // 2. Local temp file path (same-session, may be deleted by OS)
+    if (entry.imagePath.isNotEmpty &&
+        !entry.imagePath.startsWith('assets/') &&
+        File(entry.imagePath).existsSync()) {
+      return Image.file(
+        File(entry.imagePath),
+        width: 64, height: 64, fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _fallback(),
+      );
+    }
+    // 3. Generic placeholder
+    return _fallback();
   }
 
   Widget _fallback() => Container(

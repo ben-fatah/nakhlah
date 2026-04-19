@@ -1,16 +1,17 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:uuid/uuid.dart';
 
-import '../domain/scan_history_notifier.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
-import '../models/scan_result.dart';
+import '../repositories/scan_repository.dart';
+import '../services/local_inference_service.dart';
 import 'scan_result_screen.dart';
-import '../services/scan_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -27,29 +28,10 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isAnalyzing = false;
   File? _pickedImage;
 
-  /// Maps the model's English label to the correct local asset path.
-  static String _labelToAssetPath(String label) {
-    const map = {
-      'Ajwa': 'assets/images/ajwa.png',
-      'Medjool': 'assets/images/medjool.png',
-      'Sokari': 'assets/images/sukari.png',
-      'Khalas': 'assets/images/khalas.png',
-      'Barhi': 'assets/images/barhi.png',
-      'Sugaey': 'assets/images/sagai.png',
-      'Galaxy': 'assets/images/ajwa.png',
-      'Meneifi': 'assets/images/sukari.png',
-      'Nabtat Ali': 'assets/images/ajwa.png',
-      'Rutab': 'assets/images/medjool.png',
-      'Shaishe': 'assets/images/sukari.png',
-    };
-    return map[label] ?? '';
-  }
-
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
   final _picker = ImagePicker();
-  final _uuid = const Uuid();
 
   @override
   void initState() {
@@ -63,6 +45,8 @@ class _ScanScreenState extends State<ScanScreen>
     );
     _initializeCamera();
   }
+
+  // ── Camera ─────────────────────────────────────────────────────────────────
 
   Future<void> _initializeCamera() async {
     try {
@@ -81,8 +65,9 @@ class _ScanScreenState extends State<ScanScreen>
 
       final controller = CameraController(
         cameras.first,
-        ResolutionPreset.high,
+        ResolutionPreset.medium, // ⚡ medium instead of high — we compress anyway
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
       );
       _cameraController = controller;
       await controller.initialize();
@@ -97,12 +82,13 @@ class _ScanScreenState extends State<ScanScreen>
       await _cameraController?.dispose();
       _cameraController = null;
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Camera error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Camera error: $e')));
       }
     }
   }
+
+  // ── Gallery ────────────────────────────────────────────────────────────────
 
   Future<void> _pickFromGallery() async {
     try {
@@ -116,7 +102,7 @@ class _ScanScreenState extends State<ScanScreen>
             builder: (_) => AlertDialog(
               title: const Text('Permission Required'),
               content: const Text(
-                'Gallery access was permanently denied. Please enable it in Settings.',
+                'Gallery access was permanently denied. Enable it in Settings.',
               ),
               actions: [
                 TextButton(
@@ -162,12 +148,12 @@ class _ScanScreenState extends State<ScanScreen>
       });
 
       if (mounted) {
-        final l = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l.imagePicked),
+            content: Text(AppLocalizations.of(context).imagePicked),
             backgroundColor: const Color(0xFF5C3A1E),
             margin: const EdgeInsets.all(16),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -183,6 +169,8 @@ class _ScanScreenState extends State<ScanScreen>
     }
   }
 
+  // ── Capture / analyze ──────────────────────────────────────────────────────
+
   Future<void> _onCaptureTap() async {
     if (_pickedImage != null) {
       await _analyzeImage(_pickedImage!);
@@ -192,62 +180,52 @@ class _ScanScreenState extends State<ScanScreen>
         await _analyzeImage(File(photo.path));
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Capture failed: $e')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('Capture failed: $e')));
         }
       }
     }
   }
 
-  Future<void> _analyzeImage(File image) async {
+  /// Compress → local ONNX inference → save (local + Firebase) → navigate.
+  Future<void> _analyzeImage(File rawImage) async {
     setState(() => _isAnalyzing = true);
 
     try {
-      final apiResult = await ScanService.classify(image);
+      // ── Step 1: Compress image (target ≤ 150 KB) ─────────────────────────
+      final compressed = await _compressImage(rawImage);
+
+      // ── Step 2: Local ONNX inference (runs in background isolate) ──────────
+      final result = await LocalInferenceService.instance.classify(compressed);
 
       if (!mounted) return;
 
-      // ✅ Pass the local image file path so the result screen can display it
-      final result = ScanResult(
-        nameEn: apiResult.label,
-        nameAr: apiResult.nameAr,
-        originEn: apiResult.originEn,
-        originAr: apiResult.originAr,
-        confidence: apiResult.confidence,
-        calories: apiResult.calories,
-        carbs: apiResult.carbs,
-        fiber: apiResult.fiber,
-        potassium: apiResult.potassium,
-        localImagePath: image.path, // ← the actual captured/picked image
+      // ── Step 3: Hybrid save (local immediately, Firebase async) ────────────
+      await ScanRepository.instance.saveScan(
+        result: result,
+        imageFile: compressed,
       );
 
-      // Save to local history
-      scanHistoryNotifier.add(
-        ScanHistoryEntry(
-          id: _uuid.v4(),
-          nameEn: result.nameEn,
-          nameAr: result.nameAr,
-          originEn: result.originEn,
-          originAr: result.originAr,
-          confidence: result.confidence,
-          calories: result.calories,
-          carbs: result.carbs,
-          fiber: result.fiber,
-          potassium: result.potassium,
-          imagePath: _labelToAssetPath(result.nameEn),
-          scannedAt: DateTime.now(),
-        ),
-      );
-
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
-      );
-    } on ScanServiceException catch (e) {
+      // ── Step 4: Navigate to result screen ─────────────────────────────────
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
+        );
+      }
+    } on LocalInferenceException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scan failed: $e'),
           backgroundColor: Colors.red.shade700,
           duration: const Duration(seconds: 4),
         ),
@@ -257,12 +235,52 @@ class _ScanScreenState extends State<ScanScreen>
     }
   }
 
+  /// Compress an image to ≤ 150 KB, resizing to max 640 px on the longest side.
+  ///
+  /// The model only needs 260 px; compression at 640 px gives a comfortable
+  /// 2× margin while staying well under the 150 KB target.
+  Future<File> _compressImage(File source) async {
+    try {
+      final bytes = await source.readAsBytes();
+      final original = img.decodeImage(bytes);
+      if (original == null) return source;
+
+      // Resize: longest side → 640 px
+      img.Image resized;
+      if (original.width >= original.height) {
+        resized = img.copyResize(original, width: 640,
+            interpolation: img.Interpolation.linear);
+      } else {
+        resized = img.copyResize(original, height: 640,
+            interpolation: img.Interpolation.linear);
+      }
+
+      final compressed = img.encodeJpg(resized, quality: 80);
+
+      // Write to a new temp file so the original is untouched
+      final tmpDir = await getTemporaryDirectory();
+      final outPath = '${tmpDir.path}/scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final outFile = await File(outPath).writeAsBytes(compressed);
+
+      final kb = outFile.lengthSync() / 1024;
+      debugPrint('[ScanScreen] Compressed: ${source.lengthSync() ~/ 1024} KB → ${kb.round()} KB');
+      return outFile;
+    } catch (e) {
+      debugPrint('[ScanScreen] Compression failed (using original): $e');
+      return source; // safe fallback — inference will still work
+    }
+  }
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
   @override
   void dispose() {
     _cameraController?.dispose();
     _pulseController.dispose();
     super.dispose();
   }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -276,11 +294,9 @@ class _ScanScreenState extends State<ScanScreen>
         body: SafeArea(
           child: Column(
             children: [
+              // Header
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     _CircleButton(
@@ -302,14 +318,10 @@ class _ScanScreenState extends State<ScanScreen>
                           const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Color(0xFFD4A017),
-                              ),
+                              Icon(Icons.circle, size: 8, color: Color(0xFFD4A017)),
                               SizedBox(width: 6),
                               Text(
-                                'NAKHLAH AI LIVE',
+                                'NAKHLAH AI · OFFLINE',
                                 style: TextStyle(
                                   color: Color(0xFFD4A017),
                                   fontSize: 11,
@@ -322,9 +334,7 @@ class _ScanScreenState extends State<ScanScreen>
                       ),
                     ),
                     _CircleButton(
-                      icon: _pickedImage != null
-                          ? Icons.close
-                          : Icons.help_outline,
+                      icon: _pickedImage != null ? Icons.close : Icons.help_outline,
                       onTap: () {
                         if (_pickedImage != null) {
                           setState(() => _pickedImage = null);
@@ -337,6 +347,7 @@ class _ScanScreenState extends State<ScanScreen>
 
               const Spacer(),
 
+              // Viewfinder
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: AnimatedBuilder(
@@ -347,16 +358,14 @@ class _ScanScreenState extends State<ScanScreen>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(
-                            0xFFD4A017,
-                          ).withValues(alpha: _pulseAnimation.value),
+                          color: const Color(0xFFD4A017)
+                              .withValues(alpha: _pulseAnimation.value),
                           width: 3,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFFD4A017,
-                            ).withValues(alpha: _pulseAnimation.value * 0.5),
+                            color: const Color(0xFFD4A017)
+                                .withValues(alpha: _pulseAnimation.value * 0.5),
                             blurRadius: 24,
                             spreadRadius: 2,
                           ),
@@ -373,11 +382,9 @@ class _ScanScreenState extends State<ScanScreen>
 
               const SizedBox(height: 20),
 
+              // Status label
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(24),
@@ -387,14 +394,15 @@ class _ScanScreenState extends State<ScanScreen>
                   _isAnalyzing
                       ? l.analyzing
                       : _pickedImage != null
-                      ? l.imagePicked
-                      : l.alignDate,
+                          ? l.imagePicked
+                          : l.alignDate,
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ),
 
               const Spacer(),
 
+              // Controls
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Row(
@@ -411,12 +419,11 @@ class _ScanScreenState extends State<ScanScreen>
                         Text(
                           l.gallery,
                           style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
+                              color: Colors.white70, fontSize: 10),
                         ),
                       ],
                     ),
+                    // Shutter
                     GestureDetector(
                       onTap: _isAnalyzing ? null : _onCaptureTap,
                       child: Container(
@@ -429,9 +436,8 @@ class _ScanScreenState extends State<ScanScreen>
                               : const Color(0xFF5C3A1E),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(
-                                0xFFD4A017,
-                              ).withValues(alpha: 0.3),
+                              color: const Color(0xFFD4A017)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 16,
                               spreadRadius: 2,
                             ),
@@ -470,9 +476,7 @@ class _ScanScreenState extends State<ScanScreen>
                         Text(
                           l.flash,
                           style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                          ),
+                              color: Colors.white70, fontSize: 10),
                         ),
                       ],
                     ),
@@ -482,16 +486,14 @@ class _ScanScreenState extends State<ScanScreen>
 
               const SizedBox(height: 20),
 
+              // Progress / status bar
               Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.auto_awesome,
-                        color: Color(0xFFD4A017),
-                        size: 14,
-                      ),
+                      const Icon(Icons.auto_awesome,
+                          color: Color(0xFFD4A017), size: 14),
                       const SizedBox(width: 6),
                       Text(
                         _isAnalyzing ? l.analyzing : l.optimizing,
@@ -509,7 +511,7 @@ class _ScanScreenState extends State<ScanScreen>
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: null,
+                        value: _isAnalyzing ? null : 1.0,
                         backgroundColor: Colors.white12,
                         color: const Color(0xFF7D5A3C),
                         minHeight: 4,
@@ -556,6 +558,8 @@ class _ScanScreenState extends State<ScanScreen>
     );
   }
 }
+
+// ── Reusable circle button ─────────────────────────────────────────────────────
 
 class _CircleButton extends StatelessWidget {
   final IconData icon;

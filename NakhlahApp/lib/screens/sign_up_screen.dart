@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 import '../core/logger.dart';
 import '../core/validators.dart';
-import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/user_model.dart';
 import '../repositories/user_repository.dart';
@@ -34,7 +33,6 @@ class _SignUpScreenState extends State<SignUpScreen>
   final _phoneCtrl = TextEditingController();
 
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   final bool _obscureConfirm = true;
 
@@ -535,117 +533,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                   ),
                   const SizedBox(height: 20),
 
-                  // ── OR Divider ───────────────────────────────────────────
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(
-                          color: AppColors.fieldBorder,
-                          thickness: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          AppLocalizations.of(context).orDivider,
-                          style: GoogleFonts.cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.hintColor,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(
-                          color: AppColors.fieldBorder,
-                          thickness: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Google Sign-In Button ────────────────────────────────
-                  SizedBox(
-                    height: 54,
-                    child: OutlinedButton(
-                      onPressed: _isGoogleLoading
-                          ? null
-                          : () async {
-                              setState(() => _isGoogleLoading = true);
-                              try {
-                                final result =
-                                    await AuthService.signInWithGoogle();
-                                if (result != null && mounted) {
-                                  if (context.mounted) {
-                                    Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                        builder: (_) => const HomePage(),
-                                      ),
-                                      (_) => false,
-                                    );
-                                  }
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  _showSnackBar(
-                                    'Google sign-in failed. Please try again.',
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isGoogleLoading = false);
-                                }
-                              }
-                            },
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: AppColors.fieldBorder,
-                          width: 1.5,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        backgroundColor: AppColors.fieldBg,
-                        foregroundColor: AppColors.titleColor,
-                        elevation: 0,
-                      ),
-                      child: _isGoogleLoading
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: AppColors.fieldIcon,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Google "G" logo
-                                SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CustomPaint(
-                                    painter: _GoogleLogoPainter(),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  ).continueWithGoogle,
-                                  style: GoogleFonts.cairo(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.titleColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
 
                   // ── Terms & Privacy ─────────────────────────────────────
                   Center(
@@ -734,85 +621,3 @@ class _SignUpScreenState extends State<SignUpScreen>
   }
 }
 
-/// Custom painter that draws the official multi-colour Google "G" logo.
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    final bluePaint = Paint()..color = const Color(0xFF4285F4);
-    final redPaint = Paint()..color = const Color(0xFFEA4335);
-    final yellowPaint = Paint()..color = const Color(0xFFFBBC05);
-    final greenPaint = Paint()..color = const Color(0xFF34A853);
-
-    final center = Offset(w / 2, h / 2);
-    final radius = w / 2;
-    final strokeWidth = w * 0.2;
-
-    // Blue – right arc (top-right to bottom-right)
-    final blueArc = Paint()
-      ..color = bluePaint.color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      -0.6, // ~-34 degrees
-      1.15, // ~66 degrees sweep
-      false,
-      blueArc,
-    );
-
-    // Green – bottom-right arc
-    final greenArc = Paint()
-      ..color = greenPaint.color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      0.55,
-      1.0,
-      false,
-      greenArc,
-    );
-
-    // Yellow – bottom-left arc
-    final yellowArc = Paint()
-      ..color = yellowPaint.color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      1.55,
-      1.0,
-      false,
-      yellowArc,
-    );
-
-    // Red – top-left arc
-    final redArc = Paint()
-      ..color = redPaint.color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
-      2.55,
-      1.0,
-      false,
-      redArc,
-    );
-
-    // Blue horizontal bar (the crossbar of the G)
-    canvas.drawRect(
-      Rect.fromLTWH(w * 0.5, h * 0.4, w * 0.5, strokeWidth),
-      bluePaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

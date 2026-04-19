@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
@@ -11,7 +10,9 @@ import 'domain/favorites_notifier.dart';
 import 'domain/cart_notifier.dart';
 import 'domain/scan_history_notifier.dart';
 import 'repositories/onboarding_repository.dart';
-import 'services/scan_service.dart';
+import 'repositories/scan_repository.dart';
+import 'services/date_metadata.dart';
+import 'services/local_inference_service.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'screens/sign_in_screen.dart';
@@ -33,10 +34,15 @@ void main() async {
   cartNotifier.init(prefs);
   scanHistoryNotifier.init(prefs);
 
-  // Fire-and-forget warmup — wakes the Render instance so that the first
-  // scan does not pay the full cold-start penalty (~30–60 s on free tier).
-  // This runs in the background and never blocks or crashes the app.
-  ScanService.warmup();
+  // ── Load date metadata from bundled JSON (fast, synchronous after first load)
+  await DateMetadataLoader.instance.load();
+
+  // ── Warm up the ONNX inference isolate in the background
+  // so it's ready before the user opens the scan screen.
+  LocalInferenceService.instance.init(); // fire-and-forget
+
+  // ── Sync Firestore scan history in background (after local state is ready)
+  ScanRepository.instance.syncFromFirestore(); // fire-and-forget
 
   runApp(NakhlahApp(onboardingRepo: onboardingRepo));
 }
