@@ -26,24 +26,25 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isCameraInitialized = false;
   bool _isAnalyzing = false;
   File? _pickedImage;
-/// Maps the model's English label to the correct local asset path.
-/// Falls back to empty string (shows icon placeholder) for unknown labels.
-static String _labelToAssetPath(String label) {
-  const map = {
-    'Ajwa':       'assets/images/ajwa.png',
-    'Medjool':    'assets/images/medjool.png',
-    'Sokari':     'assets/images/sukari.png',   // note: file is sukari.png
-    'Khalas':     'assets/images/khalas.png',
-    'Barhi':      'assets/images/barhi.png',
-    'Sugaey':     'assets/images/sagai.png',    // note: file is sagai.png
-    'Galaxy':     'assets/images/ajwa.png',     // fallback to closest visual
-    'Meneifi':    'assets/images/sukari.png',
-    'Nabtat Ali': 'assets/images/ajwa.png',
-    'Rutab':      'assets/images/medjool.png',
-    'Shaishe':    'assets/images/sukari.png',
-  };
-  return map[label] ?? '';
-}
+
+  /// Maps the model's English label to the correct local asset path.
+  static String _labelToAssetPath(String label) {
+    const map = {
+      'Ajwa': 'assets/images/ajwa.png',
+      'Medjool': 'assets/images/medjool.png',
+      'Sokari': 'assets/images/sukari.png',
+      'Khalas': 'assets/images/khalas.png',
+      'Barhi': 'assets/images/barhi.png',
+      'Sugaey': 'assets/images/sagai.png',
+      'Galaxy': 'assets/images/ajwa.png',
+      'Meneifi': 'assets/images/sukari.png',
+      'Nabtat Ali': 'assets/images/ajwa.png',
+      'Rutab': 'assets/images/medjool.png',
+      'Shaishe': 'assets/images/sukari.png',
+    };
+    return map[label] ?? '';
+  }
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -203,12 +204,11 @@ static String _labelToAssetPath(String label) {
     setState(() => _isAnalyzing = true);
 
     try {
-      // Call the real API
       final apiResult = await ScanService.classify(image);
 
       if (!mounted) return;
 
-      // Map API response → existing ScanResult model (no screen changes needed)
+      // ✅ Pass the local image file path so the result screen can display it
       final result = ScanResult(
         nameEn: apiResult.label,
         nameAr: apiResult.nameAr,
@@ -219,6 +219,7 @@ static String _labelToAssetPath(String label) {
         carbs: apiResult.carbs,
         fiber: apiResult.fiber,
         potassium: apiResult.potassium,
+        localImagePath: image.path, // ← the actual captured/picked image
       );
 
       // Save to local history
@@ -234,7 +235,7 @@ static String _labelToAssetPath(String label) {
           carbs: result.carbs,
           fiber: result.fiber,
           potassium: result.potassium,
-         imagePath: _labelToAssetPath(result.nameEn),
+          imagePath: _labelToAssetPath(result.nameEn),
           scannedAt: DateTime.now(),
         ),
       );

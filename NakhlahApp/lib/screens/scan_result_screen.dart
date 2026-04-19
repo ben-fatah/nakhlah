@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -8,17 +9,9 @@ import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import 'market_screen.dart' as market;
 
-/// Displays the classification result returned by the AI model.
-///
-/// Receives a fully-populated [ScanResult] — no network calls happen here.
-/// All strings come from [AppLocalizations] so the page respects the app's
-/// current language.
 class ScanResultScreen extends StatelessWidget {
   final ScanResult result;
-
   const ScanResultScreen({super.key, required this.result});
-
-  // ── Share ──────────────────────────────────────────────────────────────────
 
   Future<void> _share(BuildContext context) async {
     final l = AppLocalizations.of(context);
@@ -31,19 +24,13 @@ class ScanResultScreen extends StatelessWidget {
     await Share.share(text);
   }
 
-  // ── Navigation helpers ────────────────────────────────────────────────────
-
   void _goToMarket(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const market.MarketScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const market.MarketScreen()));
   }
 
-  void _scanAgain(BuildContext context) {
-    Navigator.of(context).pop();
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────────────
+  void _scanAgain(BuildContext context) => Navigator.of(context).pop();
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +46,9 @@ class ScanResultScreen extends StatelessWidget {
           elevation: 0,
           leading: IconButton(
             icon: Icon(
-              isAr ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_rounded,
+              isAr
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.arrow_back_ios_rounded,
               color: AppColors.brown700,
               size: 20,
             ),
@@ -89,6 +78,7 @@ class ScanResultScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
+                // ✅ Hero image — shows user's actual photo
                 _HeroCard(result: result, l: l),
                 const SizedBox(height: 20),
                 Text(
@@ -144,7 +134,6 @@ class ScanResultScreen extends StatelessWidget {
 class _HeroCard extends StatelessWidget {
   final ScanResult result;
   final AppLocalizations l;
-
   const _HeroCard({required this.result, required this.l});
 
   @override
@@ -153,15 +142,7 @@ class _HeroCard extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(24),
-          child: result.imageUrl != null
-              ? Image.network(
-                  result.imageUrl!,
-                  height: 220,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) => _fallbackImage(),
-                )
-              : _fallbackImage(),
+          child: _buildImage(),
         ),
         Positioned(
           top: 12,
@@ -175,7 +156,11 @@ class _HeroCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_rounded, size: 15, color: AppColors.goldBadge),
+                const Icon(
+                  Icons.verified_rounded,
+                  size: 15,
+                  color: AppColors.goldBadge,
+                ),
                 const SizedBox(width: 5),
                 Text(
                   '${result.confidencePercent} ${l.confidence}',
@@ -193,9 +178,36 @@ class _HeroCard extends StatelessWidget {
     );
   }
 
-  Widget _fallbackImage() {
+  Widget _buildImage() {
+    // Priority 1: local file from camera/gallery (the actual photo the user took)
+    if (result.localImagePath != null && result.localImagePath!.isNotEmpty) {
+      return Image.file(
+        File(result.localImagePath!),
+        height: 280,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _fallback(),
+      );
+    }
+
+    // Priority 2: network URL from API
+    if (result.imageUrl != null && result.imageUrl!.isNotEmpty) {
+      return Image.network(
+        result.imageUrl!,
+        height: 280,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _fallback(),
+      );
+    }
+
+    // Fallback: gradient placeholder
+    return _fallback();
+  }
+
+  Widget _fallback() {
     return Container(
-      height: 220,
+      height: 280,
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -218,7 +230,6 @@ class _OriginCard extends StatelessWidget {
   final ScanResult result;
   final AppLocalizations l;
   final bool isAr;
-
   const _OriginCard({
     required this.result,
     required this.l,
@@ -249,9 +260,16 @@ class _OriginCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, color: AppColors.brown700, size: 16),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      color: AppColors.brown700,
+                      size: 16,
+                    ),
                     const SizedBox(width: 4),
-                    Text(l.origin, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      l.origin,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -276,7 +294,11 @@ class _OriginCard extends StatelessWidget {
               color: AppColors.brown100,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.map_outlined, color: AppColors.brown700, size: 32),
+            child: const Icon(
+              Icons.map_outlined,
+              color: AppColors.brown700,
+              size: 32,
+            ),
           ),
         ],
       ),
@@ -289,7 +311,6 @@ class _OriginCard extends StatelessWidget {
 class _NutritionGrid extends StatelessWidget {
   final ScanResult result;
   final AppLocalizations l;
-
   const _NutritionGrid({required this.result, required this.l});
 
   @override
@@ -302,10 +323,18 @@ class _NutritionGrid extends StatelessWidget {
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        _NutrientCard(label: l.caloriesLabel,  value: '${result.calories}',  unit: 'kcal'),
-        _NutrientCard(label: l.carbsLabel,     value: '${result.carbs}',     unit: 'g'),
-        _NutrientCard(label: l.fiberLabel,     value: '${result.fiber}',     unit: 'g'),
-        _NutrientCard(label: l.potassiumLabel, value: '${result.potassium}', unit: 'mg'),
+        _NutrientCard(
+          label: l.caloriesLabel,
+          value: '${result.calories}',
+          unit: 'kcal',
+        ),
+        _NutrientCard(label: l.carbsLabel, value: '${result.carbs}', unit: 'g'),
+        _NutrientCard(label: l.fiberLabel, value: '${result.fiber}', unit: 'g'),
+        _NutrientCard(
+          label: l.potassiumLabel,
+          value: '${result.potassium}',
+          unit: 'mg',
+        ),
       ],
     );
   }
@@ -315,10 +344,7 @@ class _NutritionGrid extends StatelessWidget {
 
 class _ActionButtons extends StatelessWidget {
   final AppLocalizations l;
-  final VoidCallback onFindSellers;
-  final VoidCallback onShare;
-  final VoidCallback onScanAgain;
-
+  final VoidCallback onFindSellers, onShare, onScanAgain;
   const _ActionButtons({
     required this.l,
     required this.onFindSellers,
@@ -335,7 +361,11 @@ class _ActionButtons extends StatelessWidget {
           height: 56,
           child: ElevatedButton.icon(
             onPressed: onFindSellers,
-            icon: const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+            icon: const Icon(
+              Icons.shopping_bag_outlined,
+              color: Colors.white,
+              size: 20,
+            ),
             label: Text(
               l.findSellers,
               style: GoogleFonts.cairo(
@@ -346,7 +376,9 @@ class _ActionButtons extends StatelessWidget {
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brown700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 2,
             ),
           ),
@@ -360,11 +392,19 @@ class _ActionButtons extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onShare,
                   icon: const Icon(Icons.share_outlined, size: 18),
-                  label: Text(l.shareResults, style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                  label: Text(
+                    l.shareResults,
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.brown700,
-                    side: const BorderSide(color: AppColors.brown700, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    side: const BorderSide(
+                      color: AppColors.brown700,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
@@ -376,11 +416,16 @@ class _ActionButtons extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: onScanAgain,
                   icon: const Icon(Icons.filter_center_focus_rounded, size: 18),
-                  label: Text(l.scanAgain, style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+                  label: Text(
+                    l.scanAgain,
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.w600),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.brown900,
                     side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
@@ -392,11 +437,10 @@ class _ActionButtons extends StatelessWidget {
   }
 }
 
-// ── Nutrient info card ────────────────────────────────────────────────────────
+// ── Small widgets ─────────────────────────────────────────────────────────────
 
 class _NutrientCard extends StatelessWidget {
   final String label, value, unit;
-
   const _NutrientCard({
     required this.label,
     required this.value,
@@ -437,7 +481,10 @@ class _NutrientCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Text(unit, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                unit,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ],
           ),
         ],
@@ -445,8 +492,6 @@ class _NutrientCard extends StatelessWidget {
     );
   }
 }
-
-// ── Verified origin badge ─────────────────────────────────────────────────────
 
 class _VerifiedBadge extends StatelessWidget {
   final String label;
@@ -463,7 +508,11 @@ class _VerifiedBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.verified_user_rounded, size: 12, color: AppColors.verifiedGreen),
+          const Icon(
+            Icons.verified_user_rounded,
+            size: 12,
+            color: AppColors.verifiedGreen,
+          ),
           const SizedBox(width: 4),
           Text(
             label,
