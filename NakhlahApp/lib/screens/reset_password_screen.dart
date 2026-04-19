@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_colors.dart';
 import '../core/logger.dart';
 import '../core/validators.dart';
-import 'new_password_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -21,11 +19,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   // ── Form ──────────────────────────────────────────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  final _linkCtrl = TextEditingController();
 
   bool _isLoading = false;
   bool _emailSent = false;
-  String? _linkError;
 
   // 60-second resend cooldown
   int _cooldown = 0;
@@ -36,7 +32,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   void dispose() {
     _emailCtrl.dispose();
-    _linkCtrl.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -48,7 +43,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _auth.sendPasswordResetEmail(email: _emailCtrl.text.trim());
+      await _auth.sendPasswordResetEmail(
+        email: _emailCtrl.text.trim(),
+        actionCodeSettings: ActionCodeSettings(
+          url: 'https://nakhlah-c5a65.firebaseapp.com',
+          handleCodeInApp: true,
+          androidPackageName: 'com.example.nakhlah',
+          androidInstallApp: true,
+          androidMinimumVersion: '1',
+        ),
+      );
 
       if (mounted) {
         setState(() {
@@ -65,62 +69,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  // ── Extract oobCode from pasted link and navigate ─────────────────────────
-  void _handlePastedLink() {
-    final text = _linkCtrl.text.trim();
-    if (text.isEmpty) {
-      setState(() => _linkError = 'Please paste the reset link.');
-      return;
-    }
-
-    final oobCode = _extractOobCode(text);
-    if (oobCode == null) {
-      setState(
-        () => _linkError =
-            'Invalid link. Please paste the full reset link from your email.',
-      );
-      return;
-    }
-
-    setState(() => _linkError = null);
-    AppLogger.d('[ResetPassword] oobCode extracted from pasted link');
-
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NewPasswordScreen(oobCode: oobCode)),
-    );
-  }
-
-  /// Try to paste from clipboard automatically.
-  Future<void> _pasteFromClipboard() async {
-    try {
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
-      if (data?.text != null && data!.text!.isNotEmpty) {
-        _linkCtrl.text = data.text!;
-        setState(() => _linkError = null);
-      }
-    } catch (e) {
-      AppLogger.e('[ResetPassword] Clipboard read error: $e');
-    }
-  }
-
-  /// Extract `oobCode` from a Firebase Auth reset URL.
-  ///
-  /// The URL looks like:
-  /// `https://domain/__/auth/action?mode=resetPassword&oobCode=ABC123&...`
-  String? _extractOobCode(String text) {
-    try {
-      final uri = Uri.parse(text);
-      final oobCode = uri.queryParameters['oobCode'];
-      if (oobCode != null && oobCode.isNotEmpty) {
-        return oobCode;
-      }
-    } catch (_) {}
-
-    // Fallback: try to find oobCode= in the raw text
-    final match = RegExp(r'oobCode=([A-Za-z0-9_-]+)').firstMatch(text);
-    return match?.group(1);
   }
 
   void _startCooldown() {
@@ -359,8 +307,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ),
                 const SizedBox(height: 28),
 
-                // ── Confirmation Banner + Link Paste Section ─────────────
-                if (_emailSent) ...[
+                // ── Confirmation Banner ─────────────────────────────────
+                if (_emailSent)
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -395,7 +343,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Check your inbox at ${_emailCtrl.text.trim()}.\nThe link expires after 1 hour.',
+                          'Check your inbox at ${_emailCtrl.text.trim()}.\nClick the link to set your new password.',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.cairo(
                             fontSize: 13,
@@ -405,170 +353,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // ── Step 2: Paste the reset link ──────────────────────
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppColors.fieldBg,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.fieldBorder),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: AppColors.buttonBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '2',
-                                  style: GoogleFonts.cairo(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Paste the reset link',
-                                style: GoogleFonts.cairo(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.titleColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Open the email → long press the link → "Copy link" → paste below.',
-                          style: GoogleFonts.cairo(
-                            fontSize: 12,
-                            color: AppColors.termsText,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // ── Link input field ─────────────────────────────
-                        TextFormField(
-                          controller: _linkCtrl,
-                          maxLines: 2,
-                          style: GoogleFonts.cairo(
-                            fontSize: 13,
-                            color: AppColors.titleColor,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'https://...',
-                            hintStyle: GoogleFonts.cairo(
-                              fontSize: 13,
-                              color: AppColors.hintColor,
-                            ),
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.only(
-                                left: 14,
-                                right: 10,
-                                bottom: 20,
-                              ),
-                              child: Icon(
-                                Icons.link_rounded,
-                                size: 20,
-                                color: AppColors.fieldIcon,
-                              ),
-                            ),
-                            prefixIconConstraints: const BoxConstraints(
-                              minWidth: 44,
-                              minHeight: 0,
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                Icons.content_paste_rounded,
-                                size: 20,
-                                color: AppColors.fieldIcon,
-                              ),
-                              tooltip: 'Paste from clipboard',
-                              onPressed: _pasteFromClipboard,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.fieldBorder,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.fieldBorder,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.fieldIcon,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_linkError != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _linkError!,
-                            style: GoogleFonts.cairo(
-                              fontSize: 12,
-                              color: Colors.red.shade600,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 14),
-
-                        // ── Continue button ──────────────────────────────
-                        SizedBox(
-                          height: 48,
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _handlePastedLink,
-                            icon: const Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 20,
-                            ),
-                            label: Text('Continue'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.buttonBg,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
-                              ),
-                              elevation: 0,
-                              textStyle: GoogleFonts.cairo(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
 
                 const SizedBox(height: 24),
 
