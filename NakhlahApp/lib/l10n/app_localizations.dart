@@ -18,7 +18,8 @@ class AppLocalizations {
   String get createAccount => isArabic ? 'إنشاء حساب' : 'CREATE ACCOUNT';
   String get email => isArabic ? 'البريد الإلكتروني' : 'Email';
   String get password => isArabic ? 'كلمة المرور' : 'Password';
-  String get confirmPassword => isArabic ? 'تأكيد كلمة المرور' : 'Confirm Password';
+  String get confirmPassword =>
+      isArabic ? 'تأكيد كلمة المرور' : 'Confirm Password';
   String get signIn => isArabic ? 'تسجيل الدخول' : 'Sign In';
   String get signUp => isArabic ? 'إنشاء حساب' : 'Sign Up';
   String get forgotPassword =>
@@ -32,8 +33,10 @@ class AppLocalizations {
 
   // ── Sign-Up specifics ────────────────────────────────────────────────────
   String get namePlaceholder => isArabic ? 'علي العتيبي' : 'Ali Al-Otaibi';
-  String get emailPlaceholder => isArabic ? 'example@mail.com' : 'example@mail.com';
-  String get phoneSaudi => isArabic ? 'رقم الجوال (سعودي)' : 'Phone Number (Saudi)';
+  String get emailPlaceholder =>
+      isArabic ? 'example@mail.com' : 'example@mail.com';
+  String get phoneSaudi =>
+      isArabic ? 'رقم الجوال (سعودي)' : 'Phone Number (Saudi)';
   String get skipPhoneVerification =>
       isArabic ? 'تخطى التحقق من الجوال' : 'Skip phone verification';
   String get orDivider => isArabic ? 'أو' : 'OR';
@@ -45,10 +48,35 @@ class AppLocalizations {
   String get privacyPolicy => isArabic ? 'سياسة الخصوصية' : 'Privacy\nPolicy';
 
   // ── Password requirements ────────────────────────────────────────────────
-  String get reqMinLength => isArabic ? '8 أحرف على الأقل' : 'At least 8 characters';
-  String get reqUppercase => isArabic ? 'حرف كبير واحد على الأقل' : 'At least one capital letter';
-  String get reqNumber => isArabic ? 'رقم واحد على الأقل' : 'At least one number';
+  String get reqMinLength =>
+      isArabic ? '8 أحرف على الأقل' : 'At least 8 characters';
+  String get reqUppercase =>
+      isArabic ? 'حرف كبير واحد على الأقل' : 'At least one capital letter';
+  String get reqNumber =>
+      isArabic ? 'رقم واحد على الأقل' : 'At least one number';
+  String get reqSpecialChar =>
+      isArabic ? 'رمز خاص واحد على الأقل' : 'At least one special character';
 
+  // ── Password Reset (new password screen) ──────────────────────────────────
+  String get newPassword => isArabic ? 'كلمة المرور الجديدة' : 'New Password';
+  String get confirmNewPassword =>
+      isArabic ? 'تأكيد كلمة المرور الجديدة' : 'Confirm New Password';
+  String get enterNewPassword =>
+      isArabic ? 'أدخل كلمة المرور الجديدة' : 'Enter a new password for';
+  String get verifyingResetLink => isArabic
+      ? 'جارٍ التحقق من رابط إعادة التعيين...'
+      : 'Verifying reset link...';
+  String get linkInvalid => isArabic ? 'الرابط غير صالح' : 'Link Invalid';
+  String get passwordChanged =>
+      isArabic ? 'تم تغيير كلمة المرور!' : 'Password Changed!';
+  String get passwordChangedSubtitle => isArabic
+      ? 'تم تحديث كلمة المرور بنجاح.\nيمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.'
+      : 'Your password has been updated successfully.\nYou can now sign in with your new password.';
+  String get goToSignIn => isArabic ? 'الذهاب لتسجيل الدخول' : 'Go to Sign In';
+  String get backToSignIn =>
+      isArabic ? 'العودة لتسجيل الدخول' : 'Back to Sign In';
+  String get confirmNewPasswordBtn =>
+      isArabic ? 'تأكيد كلمة المرور الجديدة' : 'Confirm New Password';
 
   // ── Onboarding ─────────────────────────────────────────────────────
   String get skip => isArabic ? 'تخطى' : 'Skip';
@@ -73,7 +101,8 @@ class AppLocalizations {
       ? 'تعرف على أصناف التمر في ثوانٍ'
       : 'Identify date varieties in seconds';
   String get greeting => isArabic ? 'مرحباً' : 'Marhaba';
-  String get sellerAdTitle => isArabic ? 'تمور سعودية فاخرة' : 'Premium Saudi Dates';
+  String get sellerAdTitle =>
+      isArabic ? 'تمور سعودية فاخرة' : 'Premium Saudi Dates';
   String get sellerAdSubtitle => isArabic ? 'انضم كبائع' : 'Join as a Seller';
 
   // ── Profile ─────────────────────────────────────────────────────────────
@@ -176,8 +205,7 @@ class AppLocalizations {
   String get originMadinah =>
       isArabic ? 'المدينة المنورة، السعودية' : 'Madinah, KSA';
   String get originJericho => isArabic ? 'أريحا، فلسطين' : 'Jericho, Palestine';
-  String get originQassim =>
-      isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
+  String get originQassim => isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
   String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
   String get originRiyadh => isArabic ? 'الرياض، السعودية' : 'Riyadh, KSA';
 
@@ -197,8 +225,7 @@ class AppLocalizations {
       : 'Scan a date fruit to see your history here';
 
   // ── Product Detail ────────────────────────────────────────────────────────
-  String get productDetails =>
-      isArabic ? 'تفاصيل المنتج' : 'Product Details';
+  String get productDetails => isArabic ? 'تفاصيل المنتج' : 'Product Details';
   String get description => isArabic ? 'الوصف' : 'Description';
   String get sellers => isArabic ? 'البائعون' : 'Sellers';
   String get addToCart => isArabic ? 'أضف إلى السلة' : 'Add to Cart';
@@ -224,7 +251,6 @@ class AppLocalizations {
       isArabic ? 'لا توجد منتجات لهذا البائع' : 'No products listed';
   String get reviewsLabel => isArabic ? 'تقييم' : 'reviews';
 }
-
 
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
