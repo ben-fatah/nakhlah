@@ -192,6 +192,11 @@ class AppLocalizations {
   String get filterKhalas => isArabic ? 'خلاص' : 'Khalas';
   String get filterBarhi => isArabic ? 'برحي' : 'Barhi';
   String get filterSagai => isArabic ? 'صقعي' : 'Sagai';
+  String get filterGalaxy => isArabic ? 'جالاكسي' : 'Galaxy';
+  String get filterMeneifi => isArabic ? 'منيفي' : 'Meneifi';
+  String get filterNabtatAli => isArabic ? 'نبتة علي' : 'Nabtat Ali';
+  String get filterRutab => isArabic ? 'رطب' : 'Rutab';
+  String get filterShaishe => isArabic ? 'شيشة' : 'Shaishe';
 
   // Variety names
   String get ajwaAlMadinah => isArabic ? 'عجوة المدينة' : 'Ajwa Al-Madinah';
@@ -200,6 +205,11 @@ class AppLocalizations {
   String get khalasAlAhsa => isArabic ? 'خلاص الأحساء' : 'Khalas Al-Ahsa';
   String get barhiGolden => isArabic ? 'برحي ذهبي' : 'Barhi Golden';
   String get sagaiDates => isArabic ? 'تمر صقعي' : 'Sagai Dates';
+  String get galaxyDates => isArabic ? 'تمر جالاكسي' : 'Galaxy Dates';
+  String get meneifiDates => isArabic ? 'تمر منيفي' : 'Meneifi Dates';
+  String get nabtatAliDates => isArabic ? 'تمر نبتة علي' : 'Nabtat Ali Dates';
+  String get rutabDates => isArabic ? 'رطب طازج' : 'Fresh Rutab';
+  String get shaisheDates => isArabic ? 'تمر شيشة' : 'Shaishe Dates';
 
   // Variety origins
   String get originMadinah =>
@@ -208,6 +218,16 @@ class AppLocalizations {
   String get originQassim => isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
   String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
   String get originRiyadh => isArabic ? 'الرياض، السعودية' : 'Riyadh, KSA';
+  String get originSaudiArabia =>
+      isArabic ? 'المملكة العربية السعودية' : 'Saudi Arabia';
+  String get originGulfRegion =>
+      isArabic ? 'منطقة الخليج' : 'Gulf Region';
+  String get originIraq =>
+      isArabic ? 'العراق / القصيم، السعودية' : 'Iraq / Al-Qassim, KSA';
+  String get originMadinahQassim =>
+      isArabic ? 'المدينة المنورة / القصيم، السعودية' : 'Al-Madinah / Al-Qassim, KSA';
+  String get originAhsaQassim =>
+      isArabic ? 'الأحساء / القصيم، السعودية' : 'Al-Ahsa / Al-Qassim, KSA';
 
   // ── Notifications ────────────────────────────────────────────────────────
   String get notifications => isArabic ? 'الإشعارات' : 'Notifications';

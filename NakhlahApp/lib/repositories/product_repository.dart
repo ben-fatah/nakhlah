@@ -149,4 +149,93 @@ final List<Product> _staticProducts = [
     tag: 'sagai',
     isVerified: false,
   ),
+  Product(
+    id: 'galaxy',
+    nameGetter: (l) => l.galaxyDates,
+    descriptionGetter: (l) => l.isArabic
+        ? 'تمر جالاكسي من أجود أصناف التمور السعودية، يتميز بلونه الذهبي البني '
+              'وطعمه الحلو المتوازن وقوامه الطري. يُزرع في مزارع المملكة العربية السعودية '
+              'ويُعدّ خياراً مثالياً للضيافة والهدايا.'
+        : 'Galaxy dates are among the finest Saudi varieties, distinguished by their '
+              'golden-brown colour, balanced sweetness, and soft texture. Cultivated across '
+              'Saudi Arabian farms, they are an ideal choice for hospitality and gifting.',
+    rating: 4.3,
+    reviews: 19,
+    price: 48,
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
+    imagePath: 'assets/images/galaxy.png',
+    tag: 'galaxy',
+    isVerified: false,
+  ),
+  Product(
+    id: 'meneifi',
+    nameGetter: (l) => l.meneifiDates,
+    descriptionGetter: (l) => l.isArabic
+        ? 'تمر منيفي صنف سعودي أصيل يتميز بحجمه المتوسط ولونه البني الداكن '
+              'ونكهته اللطيفة. يُقدّر لقيمته الغذائية العالية ويُستخدم في الحلويات '
+              'والأطباق التقليدية.'
+        : 'Meneifi dates are an authentic Saudi variety with a medium size, dark brown '
+              'colour, and gentle flavour. Valued for their high nutritional content, they '
+              'are commonly used in traditional desserts and dishes.',
+    rating: 4.2,
+    reviews: 14,
+    price: 40,
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
+    imagePath: 'assets/images/meneifi.png',
+    tag: 'meneifi',
+    isVerified: false,
+  ),
+  Product(
+    id: 'nabtat_ali',
+    nameGetter: (l) => l.nabtatAliDates,
+    descriptionGetter: (l) => l.isArabic
+        ? 'تمر نبتة علي صنف سعودي نادر بلون بني داكن وشكل مستطيل مميز. '
+              'يتميز بطعمه الغني وملمسه الناعم ويُعتبر من الأصناف المفضلة لدى الخبراء.'
+        : 'Nabtat Ali is a rare Saudi variety with a dark brown colour and distinctive '
+              'elongated shape. Known for its rich taste and smooth texture, it is considered '
+              'a connoisseur favourite among date enthusiasts.',
+    rating: 4.1,
+    reviews: 11,
+    price: 42,
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
+    imagePath: 'assets/images/nabtat_ali.png',
+    tag: 'nabtat_ali',
+    isVerified: false,
+  ),
+  Product(
+    id: 'rutab',
+    nameGetter: (l) => l.rutabDates,
+    descriptionGetter: (l) => l.isArabic
+        ? 'الرطب هو مرحلة النضج الطازجة للتمر، يتميز بقوامه الطري والعصيري ونكهته '
+              'الحلوة الطبيعية. يُفضّل تناوله طازجاً ويحتوي على نسبة رطوبة عالية مما '
+              'يجعله أقل سعرات حرارية من التمر المجفف.'
+        : 'Rutab is the fresh, soft ripening stage of dates, prized for its juicy texture '
+              'and natural sweetness. Best enjoyed fresh, it has a higher moisture content '
+              'and fewer calories than dried dates — a refreshing seasonal delicacy.',
+    rating: 4.5,
+    reviews: 22,
+    price: 65,
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
+    imagePath: 'assets/images/rutab.png',
+    tag: 'rutab',
+    isVerified: false,
+  ),
+  Product(
+    id: 'shaishe',
+    nameGetter: (l) => l.shaisheDates,
+    descriptionGetter: (l) => l.isArabic
+        ? 'تمر شيشة صنف سعودي يتميز بلونه البني الفاتح وملمسه الناعم وطعمه '
+              'الحلو المعتدل. من الأصناف المحبوبة في المنطقة ويُقدّم عادة مع القهوة '
+              'العربية في المجالس.'
+        : 'Shaishe dates are a Saudi variety with a light brown colour, smooth texture, '
+              'and moderately sweet taste. A beloved local variety, they are traditionally '
+              'served alongside Arabic coffee in majlis gatherings.',
+    rating: 4.2,
+    reviews: 16,
+    price: 44,
+    unitGetter: (l) => l.isArabic ? 'لكل كغ' : 'per kg',
+    imagePath: 'assets/images/shaishe.png',
+    tag: 'shaishe',
+    isVerified: false,
+  ),
 ];

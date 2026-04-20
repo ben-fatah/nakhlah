@@ -31,6 +31,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {'key': 'khalas', 'label': l.filterKhalas},
     {'key': 'barhi', 'label': l.filterBarhi},
     {'key': 'sagai', 'label': l.filterSagai},
+    {'key': 'galaxy', 'label': l.filterGalaxy},
+    {'key': 'meneifi', 'label': l.filterMeneifi},
+    {'key': 'nabtat_ali', 'label': l.filterNabtatAli},
+    {'key': 'rutab', 'label': l.filterRutab},
+    {'key': 'shaishe', 'label': l.filterShaishe},
   ];
 
   List<DateVariety> _filtered(AppLocalizations l) =>

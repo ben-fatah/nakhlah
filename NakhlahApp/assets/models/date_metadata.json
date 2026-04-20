@@ -10,8 +10,8 @@
   },
   "Galaxy": {
     "nameAr": "جالاكسي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+    "originEn": "Al-Qassim, KSA",
+    "originAr": "القصيم، السعودية",
     "calories": 270,
     "carbs": 72,
     "fiber": 6,
@@ -27,9 +27,9 @@
     "potassium": 696
   },
   "Meneifi": {
-    "nameAr": "مينيفي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+    "nameAr": "منيفي",
+    "originEn": "Riyadh, KSA",
+    "originAr": "الرياض، السعودية",
     "calories": 265,
     "carbs": 70,
     "fiber": 5,
@@ -37,8 +37,8 @@
   },
   "Nabtat Ali": {
     "nameAr": "نبتة علي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+    "originEn": "Al-Qassim, KSA",
+    "originAr": "القصيم، السعودية",
     "calories": 268,
     "carbs": 71,
     "fiber": 6,
@@ -46,8 +46,8 @@
   },
   "Rutab": {
     "nameAr": "رطب",
-    "originEn": "Gulf Region",
-    "originAr": "منطقة الخليج",
+    "originEn": "Al-Madinah / Al-Qassim, KSA",
+    "originAr": "المدينة المنورة / القصيم، السعودية",
     "calories": 142,
     "carbs": 38,
     "fiber": 4,
@@ -55,8 +55,8 @@
   },
   "Shaishe": {
     "nameAr": "شيشة",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+    "originEn": "Al-Ahsa / Al-Qassim, KSA",
+    "originAr": "الأحساء / القصيم، السعودية",
     "calories": 272,
     "carbs": 73,
     "fiber": 6,
@@ -79,5 +79,23 @@
     "carbs": 78,
     "fiber": 7,
     "potassium": 680
+  },
+  "Khalas": {
+    "nameAr": "خلاص",
+    "originEn": "Al-Ahsa, KSA",
+    "originAr": "الأحساء، السعودية",
+    "calories": 300,
+    "carbs": 80,
+    "fiber": 7,
+    "potassium": 690
+  },
+  "Barhi": {
+    "nameAr": "برحي",
+    "originEn": "Iraq / Al-Qassim, KSA",
+    "originAr": "العراق / القصيم، السعودية",
+    "calories": 282,
+    "carbs": 73,
+    "fiber": 7,
+    "potassium": 650
   }
 }
