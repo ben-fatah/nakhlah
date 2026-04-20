@@ -5,6 +5,7 @@ import '../models/seller_profile.dart';
 import '../providers/locale_provider.dart';
 import '../repositories/marketplace_seller_repository.dart';
 import '../theme/app_colors.dart';
+import 'chat_list_screen.dart';
 import 'items_management_screen.dart';
 
 /// Seller dashboard — the primary hub for a seller account.
@@ -86,8 +87,11 @@ class _SellerDashboardScreenState extends State<SellerDashboardScreen> {
                             ? 'تواصل مع المشترين'
                             : 'Chat with buyers',
                         color: const Color(0xFF2E6B4F),
-                        // Phase 3: will navigate to ChatListScreen
-                        onTap: () => _comingSoon(context, isAr),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ChatListScreen(),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       _DashboardTile(

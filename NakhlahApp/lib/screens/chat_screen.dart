@@ -6,6 +6,7 @@ import '../models/chat_models.dart';
 import '../providers/locale_provider.dart';
 import '../repositories/chat_repository.dart';
 import '../theme/app_colors.dart';
+import 'seller_review_screen.dart';
 
 /// Real-time chat between a buyer and a seller.
 ///
@@ -144,6 +145,28 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+      actions: [
+        if (!widget.isSeller)
+          IconButton(
+            tooltip: localeProvider.isArabic ? 'تقييم البائع' : 'Review Seller',
+            icon: const Icon(Icons.star_outline_rounded),
+            onPressed: () {
+              final parts = widget.chatId.split('_');
+              if (parts.length >= 3) {
+                // chatId = buyerId_sellerId_itemId
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SellerReviewScreen(
+                      sellerId: parts[1],
+                      itemId: parts.sublist(2).join('_'),
+                      itemTitle: widget.itemTitle,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+      ],
     );
   }
 
@@ -282,9 +305,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       color: Colors.white,
                       size: 20,
                     ),
+            ),
           ),
         ],
-      ],
       ),
     );
   }

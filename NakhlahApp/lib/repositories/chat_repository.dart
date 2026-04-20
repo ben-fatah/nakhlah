@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -35,7 +37,7 @@ class ChatRepository {
     required String buyerId,
     required String sellerId,
     required String itemId,
-  }) => '${buyerId}_${sellerId}_${itemId}';
+  }) => '${buyerId}_${sellerId}_$itemId';
 
   User get _me {
     final u = _auth.currentUser;
@@ -149,73 +151,53 @@ class ChatRepository {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return Stream.value([]);
 
-    // We query by sellerId OR buyerId separately and merge.
-    // Firestore doesn't support OR queries across different fields
-    // without a composite index, so we do two streams and combine in memory.
-    final asSellerStream = _chatsRef
+    // Firestore doesn't support OR queries across fields, so we run
+    // two separate queries and merge the results in memory.
+    final sellerQuery = _chatsRef
         .where('sellerId', isEqualTo: uid)
-        .orderBy('lastMessageAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map(ChatRoom.fromFirestore).toList());
+        .orderBy('lastMessageAt', descending: true);
 
-    final asBuyerStream = _chatsRef
+    final buyerQuery = _chatsRef
         .where('buyerId', isEqualTo: uid)
-        .orderBy('lastMessageAt', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map(ChatRoom.fromFirestore).toList());
+        .orderBy('lastMessageAt', descending: true);
 
-    // Combine both streams, deduplicate, sort
-    return _combinedRooms(asSellerStream, asBuyerStream);
-  }
+    late final StreamController<List<ChatRoom>> controller;
+    StreamSubscription? subA;
+    StreamSubscription? subB;
 
-  Stream<List<ChatRoom>> _combinedRooms(
-    Stream<List<ChatRoom>> a,
-    Stream<List<ChatRoom>> b,
-  ) async* {
-    List<ChatRoom> latestA = [];
-    List<ChatRoom> latestB = [];
+    List<ChatRoom> sellerRooms = [];
+    List<ChatRoom> buyerRooms = [];
 
-    await for (final _ in _mergeStreams(a, b, (va, vb) {
-      latestA = va ?? latestA;
-      latestB = vb ?? latestB;
-    })) {
+    void emit() {
+      if (controller.isClosed) return;
       final merged = <String, ChatRoom>{};
-      for (final r in [...latestA, ...latestB]) {
+      for (final r in [...sellerRooms, ...buyerRooms]) {
         merged[r.id] = r;
       }
       final sorted = merged.values.toList()
-        ..sort((x, y) => y.lastMessageAt.compareTo(x.lastMessageAt));
-      yield sorted;
+        ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+      controller.add(sorted);
     }
-  }
 
-  /// Minimal helper: interleave two streams and call [onValue] with the
-  /// latest snapshot from each. Yields a tick for every upstream event.
-  Stream<void> _mergeStreams<T>(
-    Stream<T> a,
-    Stream<T> b,
-    void Function(T? latestA, T? latestB) onValue,
-  ) async* {
-    T? latestA;
-    T? latestB;
-    await for (final _ in Stream.fromFutures([
-      a.first.then((v) {
-        latestA = v;
-        onValue(latestA, latestB);
-      }),
-      b.first.then((v) {
-        latestB = v;
-        onValue(latestA, latestB);
-      }),
-    ])) {
-      yield;
-    }
-    // After first events, continue listening
-    yield* a.asyncExpand((_) async* {
-      onValue(_, latestB);
-      latestA = _;
-      yield;
-    });
+    controller = StreamController<List<ChatRoom>>.broadcast(
+      onListen: () {
+        subA = sellerQuery.snapshots().listen((s) {
+          sellerRooms = s.docs.map(ChatRoom.fromFirestore).toList();
+          emit();
+        });
+
+        subB = buyerQuery.snapshots().listen((s) {
+          buyerRooms = s.docs.map(ChatRoom.fromFirestore).toList();
+          emit();
+        });
+      },
+      onCancel: () {
+        subA?.cancel();
+        subB?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   // ── Mark as read ──────────────────────────────────────────────────────────

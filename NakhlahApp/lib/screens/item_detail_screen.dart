@@ -1,11 +1,16 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/market_item.dart';
 import '../models/seller_profile.dart';
 import '../providers/locale_provider.dart';
+import '../repositories/chat_repository.dart';
 import '../repositories/marketplace_seller_repository.dart';
+import '../repositories/user_repository.dart';
 import '../theme/app_colors.dart';
+import 'chat_screen.dart';
+import 'seller_public_profile_screen.dart';
 
 /// Shows full detail for a [MarketItem].
 ///
@@ -215,21 +220,33 @@ class _SellerCard extends StatelessWidget {
       future: MarketplaceSellerRepository.instance.getSeller(item.sellerId),
       builder: (context, snap) {
         final seller = snap.data;
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: seller == null
+                ? null
+                : () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            SellerPublicProfileScreen(seller: seller),
+                      ),
+                    ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.brown700.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brown700.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Row(
+              child: Row(
             children: [
               // Avatar
               Container(
@@ -306,9 +323,11 @@ class _SellerCard extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
+  },
+);
   }
 
   Widget _avatarFallback() {
@@ -329,11 +348,87 @@ class _SellerCard extends StatelessWidget {
 
 // ── Contact Bar ────────────────────────────────────────────────────────────────
 
-class _ContactBar extends StatelessWidget {
+class _ContactBar extends StatefulWidget {
   final MarketItem item;
   final bool isAr;
 
   const _ContactBar({required this.item, required this.isAr});
+
+  @override
+  State<_ContactBar> createState() => _ContactBarState();
+}
+
+class _ContactBarState extends State<_ContactBar> {
+  bool _isLoading = false;
+  final _chatRepo = ChatRepository.instance;
+  final _userRepo = UserRepository();
+
+  Future<void> _contactSeller() async {
+    final me = FirebaseAuth.instance.currentUser;
+    if (me == null) return;
+
+    // Sellers cannot contact their own listing
+    if (me.uid == widget.item.sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isAr ? 'هذا منتجك الخاص' : 'This is your own listing',
+            style: GoogleFonts.cairo(),
+          ),
+          backgroundColor: Colors.grey.shade700,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final appUser = await _userRepo.getUser(me.uid);
+      final buyerName = (appUser?.fullName.isNotEmpty == true)
+          ? appUser!.fullName
+          : (me.displayName ?? 'Buyer');
+      final buyerAvatar = appUser?.photoUrl ?? '';
+
+      final chatId = await _chatRepo.openRoom(
+        item: widget.item,
+        buyerName: buyerName,
+        buyerAvatarUrl: buyerAvatar,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId,
+            peerName: widget.item.sellerName,
+            itemTitle: widget.item.title,
+            isSeller: false,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isAr
+                ? 'تعذر فتح المحادثة. حاول مجدداً.'
+                : 'Could not open chat. Please try again.',
+            style: GoogleFonts.cairo(),
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -343,26 +438,19 @@ class _ContactBar extends StatelessWidget {
         child: SizedBox(
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // Phase 3: will open ChatScreen(item: item)
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    isAr ? 'خاصية الدردشة قادمة قريباً!' : 'Chat coming in Phase 3!',
-                    style: GoogleFonts.cairo(),
-                  ),
-                  backgroundColor: AppColors.brown700,
-                  behavior: SnackBarBehavior.floating,
-                  margin: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            onPressed: _isLoading ? null : _contactSeller,
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.chat_bubble_outline_rounded),
             label: Text(
-              isAr ? 'تواصل مع البائع' : 'Contact Seller',
+              widget.isAr ? 'تواصل مع البائع' : 'Contact Seller',
               style: GoogleFonts.cairo(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -371,6 +459,7 @@ class _ContactBar extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brown700,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: AppColors.brown700.withValues(alpha: 0.4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
