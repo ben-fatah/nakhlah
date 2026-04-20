@@ -195,6 +195,7 @@ class _ScanHistoryCard extends StatelessWidget {
       onDismissed: (_) => scanHistoryNotifier.remove(entry.id),
       child: GestureDetector(
         onTap: () {
+          // Task 3: pass localImagePath so share can include the image.
           final result = ScanResult(
             nameEn: entry.nameEn,
             nameAr: entry.nameAr,
@@ -206,9 +207,12 @@ class _ScanHistoryCard extends StatelessWidget {
             fiber: entry.fiber,
             potassium: entry.potassium,
             imageUrl: entry.imageUrl,
+            localImagePath:
+                entry.imagePath.isNotEmpty ? entry.imagePath : null,
           );
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
+            MaterialPageRoute(
+                builder: (_) => ScanResultScreen(result: result)),
           );
         },
         child: Container(
@@ -297,10 +301,17 @@ class _ScanHistoryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.brown700,
-                size: 20,
+              // Task 2: visible delete button — complements swipe-to-delete.
+              IconButton(
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.red.shade300,
+                  size: 20,
+                ),
+                tooltip: isAr ? 'حذف' : 'Delete',
+                onPressed: () => _deleteWithUndo(context, entry, isAr),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
@@ -374,6 +385,31 @@ class _ScanHistoryCard extends StatelessWidget {
             'Dec',
           ];
     return '${dt.day} ${months[dt.month - 1]}';
+  }
+
+  /// Delete a single entry and offer an undo snackbar (Task 2).
+  void _deleteWithUndo(
+    BuildContext context,
+    ScanHistoryEntry entry,
+    bool isAr,
+  ) {
+    scanHistoryNotifier.remove(entry.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isAr ? 'تم حذف السجل' : 'Scan deleted',
+          style: const TextStyle(fontFamily: 'Cairo'),
+        ),
+        action: SnackBarAction(
+          label: isAr ? 'تراجع' : 'Undo',
+          onPressed: () => scanHistoryNotifier.add(entry),
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 }
 

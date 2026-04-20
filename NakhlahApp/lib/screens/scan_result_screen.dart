@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -6,13 +6,16 @@ import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
 import '../models/scan_result.dart';
 import '../providers/locale_provider.dart';
+import '../services/navigation_service.dart';
 import '../theme/app_colors.dart';
-import 'market_screen.dart' as market;
 
 class ScanResultScreen extends StatelessWidget {
   final ScanResult result;
   const ScanResultScreen({super.key, required this.result});
 
+  /// Share the scan result.
+  /// If the user's captured image is available on disk it is included
+  /// as an attachment (share_plus ^10 API). Falls back to text-only.
   Future<void> _share(BuildContext context) async {
     final l = AppLocalizations.of(context);
     final isAr = localeProvider.isArabic;
@@ -21,13 +24,29 @@ class ScanResultScreen extends StatelessWidget {
       result.localizedOrigin(isAr),
       result.confidencePercent,
     );
-    await Share.share(text);
+
+    // Task 3 fix: include image file when available (share_plus 10.x API).
+    final path = result.localImagePath;
+    if (path != null && path.isNotEmpty && File(path).existsSync()) {
+      await Share.shareXFiles(
+        [XFile(path)],
+        text: text,
+        subject: result.localizedName(isAr),
+      );
+    } else {
+      // No local file (e.g. history entry from another session) — share text.
+      await Share.share(text);
+    }
   }
 
+  /// Task 1 fix: instead of pushing a new standalone MarketScreen route
+  /// (which has no bottom nav), pop all the way back to the HomePage shell
+  /// and ask it to switch to the Market tab (index 3).
   void _goToMarket(BuildContext context) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const market.MarketScreen()));
+    // Pop back to the root HomePage.
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    // Switch the IndexedStack to the Market tab.
+    NavigationService.instance.switchTab(3);
   }
 
   void _scanAgain(BuildContext context) => Navigator.of(context).pop();

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,7 @@ import '../domain/scan_history_notifier.dart';
 import '../models/scan_result.dart';
 import '../models/seller_model.dart';
 import '../models/user_model.dart';
+import '../services/navigation_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,6 +46,9 @@ class _HomePageState extends State<HomePage> {
       market.MarketScreen(onTabChange: _onNavTap),
       const ManageProfileScreen(),
     ];
+    // Register this shell's tab-switcher so any screen can switch tabs
+    // without holding a reference to HomePageState.
+    NavigationService.instance.onTabChange = _onNavTap;
   }
 
   void _onNavTap(int navIndex) {
@@ -55,6 +60,15 @@ class _HomePageState extends State<HomePage> {
     }
     final stackIdx = _navToStackIndex[navIndex];
     if (stackIdx != null) setState(() => _selectedIndex = navIndex);
+  }
+
+  @override
+  void dispose() {
+    // Unregister so a stale callback is never called after this widget is gone.
+    if (NavigationService.instance.onTabChange == _onNavTap) {
+      NavigationService.instance.onTabChange = null;
+    }
+    super.dispose();
   }
 
   @override
@@ -219,9 +233,9 @@ class _HomeContentState extends State<_HomeContent>
             _SectionHeader(
               title: l.featuredSellers,
               actionLabel: l.exploreAll,
-              onAction: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const market.MarketScreen()),
-              ),
+              // Task 1 fix: switch to Market tab inside the existing shell
+              // instead of pushing a new route that loses the bottom nav bar.
+              onAction: () => NavigationService.instance.switchTab(3),
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -515,11 +529,46 @@ class _ScanHistoryCard extends StatelessWidget {
   final ScanHistoryEntry entry;
   const _ScanHistoryCard({required this.entry});
 
+  // ── Task 4: Build image with correct priority chain ──────────────────────
+  Widget _buildImage() {
+    // Priority 1: Firebase Storage URL (persists cross-session)
+    if (entry.imageUrl != null && entry.imageUrl!.isNotEmpty) {
+      return Image.network(
+        entry.imageUrl!,
+        height: 110,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _imageFallback(),
+      );
+    }
+    // Priority 2: Local temp file (same session, may be cleared by OS)
+    if (entry.imagePath.isNotEmpty &&
+        !entry.imagePath.startsWith('assets/') &&
+        File(entry.imagePath).existsSync()) {
+      return Image.file(
+        File(entry.imagePath),
+        height: 110,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _imageFallback(),
+      );
+    }
+    // Priority 3: Placeholder
+    return _imageFallback();
+  }
+
+  Widget _imageFallback() => Container(
+        height: 110,
+        color: const Color(0xFF2A3A3A),
+        child: const Icon(Icons.eco_rounded, color: Colors.white54, size: 40),
+      );
+
   @override
   Widget build(BuildContext context) {
     final isAr = localeProvider.isArabic;
     return GestureDetector(
       onTap: () {
+        // Task 3: pass localImagePath so share can include the image.
         final result = ScanResult(
           nameEn: entry.nameEn,
           nameAr: entry.nameAr,
@@ -531,11 +580,14 @@ class _ScanHistoryCard extends StatelessWidget {
           fiber: entry.fiber,
           potassium: entry.potassium,
           imageUrl: entry.imageUrl,
+          localImagePath: entry.imagePath.isNotEmpty ? entry.imagePath : null,
         );
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => ScanResultScreen(result: result)),
         );
       },
+      // Task 2: long-press to delete with confirmation.
+      onLongPress: () => _confirmDelete(context),
       child: Container(
         width: 150,
         margin: const EdgeInsets.only(right: 14),
@@ -557,31 +609,7 @@ class _ScanHistoryCard extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(16),
               ),
-              child: entry.imagePath.isNotEmpty
-                  ? Image.asset(
-                      entry.imagePath,
-                      height: 110,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        height: 110,
-                        color: const Color(0xFF2A3A3A),
-                        child: const Icon(
-                          Icons.eco_rounded,
-                          color: Colors.white54,
-                          size: 40,
-                        ),
-                      ),
-                    )
-                  : Container(
-                      height: 110,
-                      color: const Color(0xFF2A3A3A),
-                      child: const Icon(
-                        Icons.eco_rounded,
-                        color: Colors.white54,
-                        size: 40,
-                      ),
-                    ),
+              child: _buildImage(),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
@@ -622,6 +650,42 @@ class _ScanHistoryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    final isAr = localeProvider.isArabic;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          isAr ? 'حذف المسح؟' : 'Delete scan?',
+          style: GoogleFonts.cairo(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          isAr
+              ? 'سيتم حذف هذا السجل نهائياً.'
+              : 'This scan record will be permanently removed.',
+          style: GoogleFonts.cairo(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(isAr ? 'إلغاء' : 'Cancel',
+                style: GoogleFonts.cairo()),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              scanHistoryNotifier.remove(entry.id);
+            },
+            child: Text(
+              isAr ? 'حذف' : 'Delete',
+              style: GoogleFonts.cairo(color: Colors.red.shade600),
+            ),
+          ),
+        ],
       ),
     );
   }
