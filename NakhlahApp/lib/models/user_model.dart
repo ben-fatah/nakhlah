@@ -10,6 +10,8 @@ class AppUser {
   final String photoUrl;
   final String provider;
   final String phone;
+  /// "buyer" (default) or "seller" — upgraded via [SellerRepository].
+  final String role;
   final DateTime? lastSignIn;
   final DateTime? createdAt;
 
@@ -20,6 +22,7 @@ class AppUser {
     this.photoUrl = '',
     this.provider = 'email',
     this.phone = '',
+    this.role = 'buyer',
     this.lastSignIn,
     this.createdAt,
   });
@@ -34,6 +37,7 @@ class AppUser {
       photoUrl: data['photoUrl'] as String? ?? '',
       provider: data['provider'] as String? ?? 'email',
       phone: data['phone'] as String? ?? '',
+      role: data['role'] as String? ?? 'buyer',
       lastSignIn: (data['lastSignIn'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
@@ -50,6 +54,7 @@ class AppUser {
       'photoUrl': photoUrl,
       'provider': provider,
       'phone': phone,
+      'role': role,
       'lastSignIn': FieldValue.serverTimestamp(),
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -63,6 +68,7 @@ class AppUser {
     String? photoUrl,
     String? provider,
     String? phone,
+    String? role,
     DateTime? lastSignIn,
     DateTime? createdAt,
   }) {
@@ -73,6 +79,7 @@ class AppUser {
       photoUrl: photoUrl ?? this.photoUrl,
       provider: provider ?? this.provider,
       phone: phone ?? this.phone,
+      role: role ?? this.role,
       lastSignIn: lastSignIn ?? this.lastSignIn,
       createdAt: createdAt ?? this.createdAt,
     );

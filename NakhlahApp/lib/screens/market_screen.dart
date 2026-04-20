@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../domain/cart_notifier.dart';
-import '../domain/favorites_notifier.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
-import '../models/product_model.dart';
-import '../repositories/product_repository.dart';
-import 'cart_screen.dart';
-import 'product_detail_screen.dart';
+import '../models/market_item.dart';
+import '../repositories/item_repository.dart';
+import 'item_detail_screen.dart';
 
 class MarketScreen extends StatefulWidget {
   final ValueChanged<int>? onTabChange;
@@ -20,26 +17,33 @@ class MarketScreen extends StatefulWidget {
 }
 
 class _MarketScreenState extends State<MarketScreen> {
-  String _selectedFilter = 'all';
+  String _selectedVariety = '';
   String _searchQuery = '';
   final _searchCtrl = TextEditingController();
-  final _productRepo = ProductRepository();
+  final _itemRepo = ItemRepository.instance;
 
-  List<Map<String, dynamic>> _getFilters(AppLocalizations l) => [
-    {'key': 'all', 'label': l.allVarieties},
-    {'key': 'medjool', 'label': l.filterMedjool},
+  List<Map<String, String>> _getFilters(AppLocalizations l) => [
+    {'key': '', 'label': l.allVarieties},
     {'key': 'ajwa', 'label': l.filterAjwa},
+    {'key': 'medjool', 'label': l.filterMedjool},
     {'key': 'sukkari', 'label': l.filterSukkari},
     {'key': 'khalas', 'label': l.filterKhalas},
     {'key': 'barhi', 'label': l.filterBarhi},
     {'key': 'sagai', 'label': l.filterSagai},
   ];
 
-  List<Product> _filtered(AppLocalizations l) => _productRepo.getFiltered(
-    l,
-    tag: _selectedFilter,
-    searchQuery: _searchQuery,
-  );
+  List<MarketItem> _applyFilters(List<MarketItem> items) {
+    return items.where((item) {
+      final matchVariety =
+          _selectedVariety.isEmpty || item.variety == _selectedVariety;
+      final q = _searchQuery.trim().toLowerCase();
+      final matchSearch = q.isEmpty ||
+          item.title.toLowerCase().contains(q) ||
+          item.sellerName.toLowerCase().contains(q) ||
+          item.variety.toLowerCase().contains(q);
+      return matchVariety && matchSearch;
+    }).toList();
+  }
 
   @override
   void dispose() {
@@ -51,24 +55,40 @@ class _MarketScreenState extends State<MarketScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final isAr = localeProvider.isArabic;
+
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: AppColors.screenBg,
-        // No bottomNavigationBar here — handled by HomePage shell
         body: Column(
           children: [
-            _MarketHeader(l: l),
-            _buildSearchBar(l, isAr),
+            _MarketHeader(l: l, isAr: isAr),
+            _buildSearchBar(isAr),
             _buildFilterChips(l),
-            Expanded(child: _buildScrollBody(l)),
+            Expanded(
+              child: StreamBuilder<List<MarketItem>>(
+                stream: _itemRepo.watchActiveItems(),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.brown700,
+                      ),
+                    );
+                  }
+                  final all = snap.data ?? [];
+                  final items = _applyFilters(all);
+                  return _buildGrid(items, isAr);
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSearchBar(AppLocalizations l, bool isAr) {
+  Widget _buildSearchBar(bool isAr) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Container(
@@ -82,7 +102,7 @@ class _MarketScreenState extends State<MarketScreen> {
           onChanged: (v) => setState(() => _searchQuery = v),
           style: GoogleFonts.cairo(fontSize: 14, color: AppColors.brown900),
           decoration: InputDecoration(
-            hintText: l.searchHint,
+            hintText: localeProvider.isArabic ? 'ابحث عن منتج...' : 'Search items...',
             hintStyle: GoogleFonts.cairo(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -116,13 +136,14 @@ class _MarketScreenState extends State<MarketScreen> {
         itemCount: filters.length,
         itemBuilder: (context, i) {
           final f = filters[i];
-          final isActive = _selectedFilter == f['key'];
+          final isActive = _selectedVariety == f['key'];
           return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = f['key']!),
+            onTap: () => setState(() => _selectedVariety = f['key']!),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.chipActive : Colors.white,
                 borderRadius: BorderRadius.circular(50),
@@ -147,163 +168,139 @@ class _MarketScreenState extends State<MarketScreen> {
     );
   }
 
-  Widget _buildScrollBody(AppLocalizations l) {
-    final products = _filtered(l);
+  Widget _buildGrid(List<MarketItem> items, bool isAr) {
+    if (items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.eco_outlined, color: Colors.grey.shade300, size: 52),
+            const SizedBox(height: 12),
+            Text(
+              isAr ? 'لا توجد منتجات متاحة' : 'No items available yet',
+              style: GoogleFonts.cairo(
+                color: Colors.grey.shade400,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isAr ? 'كن أول بائع!' : 'Be the first seller!',
+              style: GoogleFonts.cairo(
+                color: Colors.grey.shade400,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: _buildHeroBanner(l)),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-            child: Text(
-              l.isArabic ? 'جميع المنتجات' : 'All Products',
-              style: GoogleFonts.cairo(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.brown900,
+        SliverToBoxAdapter(child: _buildHeroBanner(isAr)),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: 0.72,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ItemDetailScreen(item: items[i]),
+                  ),
+                ),
+                child: _ItemCard(item: items[i], isAr: isAr),
               ),
+              childCount: items.length,
             ),
           ),
         ),
-        if (products.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.eco_outlined,
-                    color: Colors.grey.shade300,
-                    size: 52,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l.noVarietiesFound,
-                    style: GoogleFonts.cairo(
-                      color: Colors.grey.shade400,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
-              ),
-              delegate: SliverChildBuilderDelegate((context, i) {
-                final product = products[i];
-                return GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ProductDetailScreen(product: product),
-                    ),
-                  ),
-                  child: _ProductCard(product: product, l: l),
-                );
-              }, childCount: products.length),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildHeroBanner(AppLocalizations l) {
+  Widget _buildHeroBanner(bool isAr) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
-        height: 170,
+        height: 160,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          color: const Color(0xFF1A0A00),
+          gradient: const LinearGradient(
+            colors: [AppColors.brown900, Color(0xFF6B3A1E)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
                 'assets/images/sukari.png',
                 fit: BoxFit.cover,
                 color: Colors.black.withValues(alpha: 0.45),
                 colorBlendMode: BlendMode.darken,
-                errorBuilder: (context, error, stack) => Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(
-                      colors: [AppColors.brown900, Color(0xFF6B3A1E)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      l.isArabic ? 'عرض خاص' : 'Special Offer',
-                      style: GoogleFonts.cairo(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.brown900,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        isAr ? 'السوق الطازج' : 'Fresh Market',
+                        style: GoogleFonts.cairo(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.brown900,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l.sukkariMofatall,
-                    style: GoogleFonts.cairo(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                    const SizedBox(height: 6),
+                    Text(
+                      isAr ? 'أجود تمور المملكة' : 'Saudi Arabia\'s finest dates',
+                      style: GoogleFonts.cairo(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  Text(
-                    l.isArabic
-                        ? 'قطاف الموسم الجديد من مزارع القصيم'
-                        : 'New season harvest from Qassim',
-                    style: GoogleFonts.cairo(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Market Header ─────────────────────────────────────────────────────────────
+// ── Market Header ──────────────────────────────────────────────────────────────
+
 class _MarketHeader extends StatelessWidget {
   final AppLocalizations l;
-  const _MarketHeader({required this.l});
+  final bool isAr;
+
+  const _MarketHeader({required this.l, required this.isAr});
 
   @override
   Widget build(BuildContext context) {
@@ -318,87 +315,27 @@ class _MarketHeader extends StatelessWidget {
         ),
       ),
       padding: EdgeInsets.fromLTRB(20, topPad + 14, 20, 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l.market,
-                  style: GoogleFonts.cairo(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l.isArabic
-                      ? 'اكتشف أجود أصناف التمور من أفضل المزارع'
-                      : 'Discover premium dates from the finest farms',
-                  style: GoogleFonts.cairo(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
+          Text(
+            l.market,
+            style: GoogleFonts.cairo(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              height: 1.15,
             ),
           ),
-          // Cart icon with badge
-          ValueListenableBuilder<List<CartItem>>(
-            valueListenable: cartNotifier,
-            builder: (_, items, _) {
-              final count = items.fold(0, (s, i) => s + i.quantity);
-              return GestureDetector(
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const CartScreen())),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.shopping_cart_outlined,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    if (count > 0)
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: const BoxDecoration(
-                            color: AppColors.gold,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$count',
-                              style: GoogleFonts.cairo(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.brown900,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
+          const SizedBox(height: 4),
+          Text(
+            isAr
+                ? 'اكتشف أجود أصناف التمور من أفضل المزارع'
+                : 'Discover premium dates from the finest farms',
+            style: GoogleFonts.cairo(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),
@@ -406,12 +343,13 @@ class _MarketHeader extends StatelessWidget {
   }
 }
 
-// ── Product Card ──────────────────────────────────────────────────────────────
-class _ProductCard extends StatelessWidget {
-  final Product product;
-  final AppLocalizations l;
+// ── Item Card ──────────────────────────────────────────────────────────────────
 
-  const _ProductCard({required this.product, required this.l});
+class _ItemCard extends StatelessWidget {
+  final MarketItem item;
+  final bool isAr;
+
+  const _ItemCard({required this.item, required this.isAr});
 
   @override
   Widget build(BuildContext context) {
@@ -430,104 +368,25 @@ class _ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Image ──────────────────────────────────────────────────────
           Expanded(
             flex: 5,
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
-                  ),
-                  child: Image.asset(
-                    product.imagePath,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      color: const Color(0xFF2A3A3A),
-                      child: const Icon(
-                        Icons.eco_rounded,
-                        color: Colors.white54,
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                ),
-                // Verified badge
-                if (product.isVerified)
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.verifiedGreen,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.verified_rounded,
-                            color: Colors.white,
-                            size: 11,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            l.isArabic ? 'موثق' : 'Verified',
-                            style: GoogleFonts.cairo(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Favorites button
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: ValueListenableBuilder<Set<String>>(
-                    valueListenable: favoritesNotifier,
-                    builder: (_, favorites, _) {
-                      final isFav = favorites.contains(product.id);
-                      return GestureDetector(
-                        onTap: () => favoritesNotifier.toggle(product.id),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 6,
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            isFav
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            color: isFav
-                                ? Colors.red.shade400
-                                : Colors.grey.shade400,
-                            size: 16,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(18),
+              ),
+              child: item.imageUrl.isNotEmpty
+                  ? Image.network(
+                      item.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _imageFallback(),
+                    )
+                  : _imageFallback(),
             ),
           ),
+          // ── Info ───────────────────────────────────────────────────────
           Expanded(
             flex: 4,
             child: Padding(
@@ -537,8 +396,8 @@ class _ProductCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    product.nameGetter(l),
-                    maxLines: 1,
+                    item.title,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.cairo(
                       fontWeight: FontWeight.w700,
@@ -546,119 +405,43 @@ class _ProductCard extends StatelessWidget {
                       color: AppColors.brown900,
                     ),
                   ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: AppColors.gold,
-                        size: 13,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        product.rating.toStringAsFixed(1),
-                        style: GoogleFonts.cairo(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.brown900,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '(${product.reviews})',
-                        style: GoogleFonts.cairo(
-                          fontSize: 10,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    item.sellerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.cairo(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                    ),
                   ),
+                  // Price row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l.isArabic
-                                ? 'ر.س ${product.price.toStringAsFixed(0)}'
-                                : 'SAR ${product.price.toStringAsFixed(0)}',
-                            style: GoogleFonts.cairo(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.brown900,
-                            ),
+                      Flexible(
+                        child: Text(
+                          item.priceLabel(isAr),
+                          style: GoogleFonts.cairo(
+                            fontSize: item.price != null ? 15 : 12,
+                            fontWeight: FontWeight.w800,
+                            color: item.price != null
+                                ? AppColors.brown900
+                                : AppColors.verifiedGreen,
                           ),
-                          Text(
-                            product.unitGetter(l),
-                            style: GoogleFonts.cairo(
-                              fontSize: 10,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                      // Cart add button — reactive via ValueListenableBuilder
-                      ValueListenableBuilder<List<CartItem>>(
-                        valueListenable: cartNotifier,
-                        builder: (_, _, _) {
-                          final inCart = cartNotifier.contains(product.id);
-                          return GestureDetector(
-                            onTap: () {
-                              if (inCart) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const CartScreen(),
-                                  ),
-                                );
-                              } else {
-                                cartNotifier.add(
-                                  CartItem(
-                                    productId: product.id,
-                                    name: product.nameGetter(l),
-                                    price: product.price,
-                                    unit: product.unitGetter(l),
-                                    imagePath: product.imagePath,
-                                  ),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      l.isArabic
-                                          ? 'تمت الإضافة إلى السلة'
-                                          : 'Added to cart',
-                                      style: GoogleFonts.cairo(),
-                                    ),
-                                    backgroundColor: AppColors.brown700,
-                                    margin: const EdgeInsets.all(16),
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    duration: const Duration(seconds: 1),
-                                  ),
-                                );
-                              }
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: inCart
-                                    ? AppColors.verifiedGreen
-                                    : AppColors.brown900,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                inCart
-                                    ? Icons.shopping_cart_rounded
-                                    : Icons.add_shopping_cart_rounded,
-                                color: Colors.white,
-                                size: 17,
-                              ),
-                            ),
-                          );
-                        },
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppColors.brown900,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -670,4 +453,11 @@ class _ProductCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _imageFallback() => Container(
+        color: const Color(0xFF2A3A3A),
+        child: const Center(
+          child: Icon(Icons.eco_rounded, color: Colors.white38, size: 36),
+        ),
+      );
 }

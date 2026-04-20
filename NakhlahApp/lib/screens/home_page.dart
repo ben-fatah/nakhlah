@@ -11,6 +11,7 @@ import 'history_screen.dart';
 import 'market_screen.dart' as market;
 import 'notifications_panel.dart';
 import 'seller_screen.dart';
+import 'seller_onboarding_screen.dart';
 import '../providers/locale_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
@@ -809,72 +810,77 @@ class _SellerAdvertisementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      height: 120,
-      decoration: BoxDecoration(
-        color: AppColors.brown900,
-        borderRadius: BorderRadius.circular(16),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/seller_banner.png'),
-          fit: BoxFit.cover,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brown900.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SellerOnboardingScreen()),
       ),
       child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        height: 120,
         decoration: BoxDecoration(
+          color: AppColors.brown900,
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              Colors.black.withValues(alpha: 0.7),
-              Colors.black.withValues(alpha: 0.3),
-              Colors.transparent,
-            ],
-            begin: l.isArabic ? Alignment.centerRight : Alignment.centerLeft,
-            end: l.isArabic ? Alignment.centerLeft : Alignment.centerRight,
+          image: const DecorationImage(
+            image: AssetImage('assets/images/seller_banner.png'),
+            fit: BoxFit.cover,
           ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              l.sellerAdTitle,
-              style: GoogleFonts.cairo(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  l.sellerAdSubtitle,
-                  style: GoogleFonts.cairo(
-                    color: AppColors.goldBadge,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  l.isArabic
-                      ? Icons.arrow_back_rounded
-                      : Icons.arrow_forward_rounded,
-                  color: AppColors.goldBadge,
-                  size: 16,
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brown900.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [
+                Colors.black.withValues(alpha: 0.7),
+                Colors.black.withValues(alpha: 0.3),
+                Colors.transparent,
+              ],
+              begin: l.isArabic ? Alignment.centerRight : Alignment.centerLeft,
+              end: l.isArabic ? Alignment.centerLeft : Alignment.centerRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                l.sellerAdTitle,
+                style: GoogleFonts.cairo(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    l.sellerAdSubtitle,
+                    style: GoogleFonts.cairo(
+                      color: AppColors.goldBadge,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    l.isArabic
+                        ? Icons.arrow_back_rounded
+                        : Icons.arrow_forward_rounded,
+                    color: AppColors.goldBadge,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

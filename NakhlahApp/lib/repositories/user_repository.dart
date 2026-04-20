@@ -104,4 +104,21 @@ class UserRepository {
     // 3) Fallback to email prefix
     return (user.email ?? 'User').split('@').first;
   }
+
+  /// Promote the current user's role to "seller" in Firestore.
+  ///
+  /// Should only be called after the seller profile document is created.
+  Future<void> upgradeToSeller(String uid) async {
+    await _usersRef.doc(uid).set(
+      {'role': 'seller'},
+      SetOptions(merge: true),
+    );
+  }
+
+  /// Check whether [uid] is a seller.
+  Future<bool> isSeller(String uid) async {
+    final doc = await _usersRef.doc(uid).get();
+    if (!doc.exists) return false;
+    return (doc.data()?['role'] as String?) == 'seller';
+  }
 }

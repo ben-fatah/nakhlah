@@ -18,6 +18,7 @@ import 'auth/otp_verification_screen.dart';
 import 'sign_in_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
+import 'seller_dashboard_screen.dart';
 
 class ManageProfileScreen extends StatefulWidget {
   const ManageProfileScreen({super.key});
@@ -37,6 +38,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   bool _isFetching = true;
   String? _photoUrl;
   String _originalPhone = '';
+  bool _isSeller = false; // true when users/{uid}.role == "seller"
 
   final _auth = FirebaseAuth.instance;
   final _storage = FirebaseStorage.instance;
@@ -75,6 +77,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         _photoUrl = appUser.photoUrl.isNotEmpty
             ? appUser.photoUrl
             : user.photoURL ?? '';
+        _isSeller = appUser.role == 'seller';
       } else if (mounted) {
         _emailCtrl.text = user.email ?? '';
         _photoUrl = user.photoURL ?? '';
@@ -662,6 +665,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   }
 
   Widget _buildSettingsList(AppLocalizations l) {
+    final isAr = localeProvider.isArabic;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardWhite,
@@ -676,6 +680,33 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
       ),
       child: Column(
         children: [
+          // Seller dashboard entry — only shown when role == "seller"
+          if (_isSeller) ...[
+            _SettingsTile(
+              icon: Icons.storefront_rounded,
+              label: isAr ? 'لوحة تحكم البائع' : 'My Seller Dashboard',
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.goldBadge.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isAr ? 'بائع' : 'Seller',
+                  style: GoogleFonts.cairo(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.goldDark,
+                  ),
+                ),
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const SellerDashboardScreen()),
+              ),
+            ),
+            const Divider(height: 1, indent: 56, endIndent: 16),
+          ],
           _SettingsTile(
             icon: Icons.language_rounded,
             label: l.changeLanguage,
