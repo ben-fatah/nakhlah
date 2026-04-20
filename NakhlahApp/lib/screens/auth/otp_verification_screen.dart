@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dio/dio.dart';
 
 import '../../theme/app_colors.dart';
 import '../../core/logger.dart';
@@ -40,13 +40,25 @@ class OtpVerificationScreen extends StatefulWidget {
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     with SingleTickerProviderStateMixin {
-  // ── Firebase ──────────────────────────────────────────────────────────────
-  final _auth = FirebaseAuth.instance;
-  String? _verificationId;
-  int? _resendToken;
+  // ── Authentica API ────────────────────────────────────────────────────────
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'https://api.authentica.sa/api/v2/',
+    headers: {
+      'X-Authorization': r'$2y$10$msQf48nCdkmu7pU9n0W9VOgw0pSrwSe7vD09ioaxTepB7i1A5AGte',
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+  ));
+
+  String _formatPhone(String phone) {
+    if (phone.startsWith('05')) {
+      return '+966${phone.substring(1)}';
+    }
+    return phone;
+  }
 
   // ── OTP boxes ─────────────────────────────────────────────────────────────
-  static const int _otpLength = 6;
+  static const int _otpLength = 4;
   final List<TextEditingController> _otpControllers =
       List.generate(_otpLength, (_) => TextEditingController());
   final List<FocusNode> _focusNodes =
@@ -99,7 +111,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     super.dispose();
   }
 
-  // ── Firebase: send OTP ────────────────────────────────────────────────────
+  // ── Authentica: send OTP ──────────────────────────────────────────────────
   Future<void> _sendOtp({bool isResend = false}) async {
     setState(() {
       _isSending = true;
@@ -115,50 +127,23 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     }
 
     try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: widget.phoneNumber,
-        forceResendingToken: _resendToken,
-        timeout: const Duration(seconds: 60),
+      final phone = _formatPhone(widget.phoneNumber);
+      AppLogger.d('[OTP] Sending OTP via Authentica to $phone');
+      
+      await _dio.post('send-otp', data: {
+        "method": "sms",
+        "phone": phone,
+      });
 
-        // ── Auto-retrieval (Android SMS listener) ──────────────────────────
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          AppLogger.d('[OTP] Auto-retrieved credential — signing in…');
-          await _signInWithCredential(credential);
-        },
-
-        // ── Verification failed ────────────────────────────────────────────
-        verificationFailed: (FirebaseAuthException e) {
-          AppLogger.e('[OTP] Verification failed: ${e.code} — ${e.message}');
-          if (mounted) {
-            setState(() {
-              _isSending = false;
-              _errorMsg = _friendlyError(e.code);
-            });
-          }
-        },
-
-        // ── Code sent — user must type it ─────────────────────────────────
-        codeSent: (String verificationId, int? resendToken) {
-          AppLogger.d('[OTP] Code sent. verificationId=$verificationId');
-          if (mounted) {
-            setState(() {
-              _verificationId = verificationId;
-              _resendToken = resendToken;
-              _isSending = false;
-            });
-            _startResendTimer();
-            if (!isResend) _focusNodes.first.requestFocus();
-          }
-        },
-
-        // ── Auto-retrieval timeout ─────────────────────────────────────────
-        codeAutoRetrievalTimeout: (String verificationId) {
-          AppLogger.d('[OTP] Auto-retrieval timeout.');
-          if (mounted) setState(() => _verificationId = verificationId);
-        },
-      );
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+        _startResendTimer();
+        if (!isResend) _focusNodes.first.requestFocus();
+      }
     } catch (e, st) {
-      AppLogger.e('[OTP] Unexpected error during verifyPhoneNumber', error: e, stackTrace: st);
+      AppLogger.e('[OTP] Unexpected error during send-otp', error: e, stackTrace: st);
       if (mounted) {
         setState(() {
           _isSending = false;
@@ -168,9 +153,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     }
   }
 
-  // ── Firebase: verify OTP ──────────────────────────────────────────────────
+  // ── Authentica: verify OTP ────────────────────────────────────────────────
   Future<void> _verifyOtp() async {
-    if (!_otpComplete || _verificationId == null) return;
+    if (!_otpComplete) return;
 
     setState(() {
       _isVerifying = true;
@@ -178,34 +163,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
 
     try {
-      final credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: _enteredOtp,
-      );
-      await _signInWithCredential(credential);
-    } on FirebaseAuthException catch (e) {
-      AppLogger.e('[OTP] Sign-in error: ${e.code}');
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-          _errorMsg = _friendlyError(e.code);
-        });
-      }
-    } catch (e, st) {
-      AppLogger.e('[OTP] Unexpected error during sign-in', error: e, stackTrace: st);
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-          _errorMsg = 'Verification failed. Please try again.';
-        });
-      }
-    }
-  }
+      final phone = _formatPhone(widget.phoneNumber);
+      await _dio.post('verify-otp', data: {
+        "phone": phone,
+        "otp": _enteredOtp,
+      });
 
-  Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
-    try {
-      await _auth.signInWithCredential(credential);
-      AppLogger.d('[OTP] Sign-in succeeded.');
+      AppLogger.d('[OTP] Verification succeeded via Authentica.');
       if (!mounted) return;
 
       if (widget.onVerified != null) {
@@ -216,13 +180,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           (_) => false,
         );
       }
-    } on FirebaseAuthException catch (e) {
-      AppLogger.e('[OTP] Credential sign-in failed: ${e.code}');
+    } catch (e, st) {
+      AppLogger.e('[OTP] Verification failed', error: e, stackTrace: st);
       if (mounted) {
         setState(() {
           _isVerifying = false;
-          _errorMsg = _friendlyError(e.code);
         });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Incorrect OTP code. Please try again.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -246,25 +217,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
   }
 
-  // ── Error mapping ─────────────────────────────────────────────────────────
-  String _friendlyError(String code) {
-    switch (code) {
-      case 'invalid-verification-code':
-        return 'Incorrect OTP code. Please try again.';
-      case 'session-expired':
-        return 'OTP expired. Please request a new one.';
-      case 'invalid-phone-number':
-        return 'Invalid phone number format.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please wait before retrying.';
-      case 'quota-exceeded':
-        return 'SMS quota exceeded. Please try again later.';
-      case 'network-request-failed':
-        return 'Network error. Check your connection.';
-      default:
-        return 'Something went wrong ($code). Please try again.';
-    }
-  }
+
 
   // =========================================================================
   // UI
@@ -329,7 +282,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                       height: 1.5,
                     ),
                     children: [
-                      const TextSpan(text: 'A 6-digit code was sent to\n'),
+                      const TextSpan(text: 'A 4-digit code was sent to\n'),
                       TextSpan(
                         text: widget.phoneNumber,
                         style: GoogleFonts.cairo(
