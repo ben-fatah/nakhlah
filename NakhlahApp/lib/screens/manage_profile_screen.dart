@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:permission_handler/permission_handler.dart';
 
 import '../theme/app_colors.dart';
@@ -41,7 +42,6 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
   bool _isSeller = false; // true when users/{uid}.role == "seller"
 
   final _auth = FirebaseAuth.instance;
-  final _storage = FirebaseStorage.instance;
   final _userRepo = UserRepository();
   final _picker = ImagePicker();
 
@@ -89,7 +89,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     }
   }
 
-  // ── Photo Upload ──────────────────────────────────────────────────────────
+  // ── Photo Upload (FREE — base64 in Firestore, no Storage needed) ──────────
 
   Future<void> _pickAndUploadPhoto() async {
     final user = _auth.currentUser;
@@ -112,37 +112,33 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
 
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 75,
-      maxWidth: 512,
-      maxHeight: 512,
+      imageQuality: 70,
+      maxWidth: 300,
+      maxHeight: 300,
     );
     if (picked == null) return;
 
     setState(() => _isUploadingPhoto = true);
 
     try {
-      final file = File(picked.path);
-      final ext = picked.name.split('.').last.toLowerCase();
-      final ref = _storage
-          .ref()
-          .child('profile_photos')
-          .child('${user.uid}.$ext');
+      // Read the picked file
+      final bytes = await File(picked.path).readAsBytes();
 
-      // Upload
-      final task = await ref.putFile(
-        file,
-        SettableMetadata(contentType: 'image/$ext'),
-      );
+      // Decode, resize to 200×200, and re-encode as JPEG at 70% quality
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) throw Exception('Could not decode image');
+      final resized = img.copyResize(decoded, width: 200, height: 200);
+      final jpegBytes = img.encodeJpg(resized, quality: 70);
 
-      // Get download URL
-      final url = await task.ref.getDownloadURL();
+      // Convert to base64 data URI
+      final base64Str = base64Encode(jpegBytes);
+      final dataUri = 'data:image/jpeg;base64,$base64Str';
 
-      // Save to Firestore + Firebase Auth profile
-      await _userRepo.updateUser(user.uid, {'photoUrl': url});
-      await user.updatePhotoURL(url);
+      // Save to Firestore (FREE — no Firebase Storage needed)
+      await _userRepo.updateUser(user.uid, {'photoUrl': dataUri});
 
       if (mounted) {
-        setState(() => _photoUrl = url);
+        setState(() => _photoUrl = dataUri);
         _showSnackBar(
           localeProvider.isArabic
               ? 'تم تحديث الصورة بنجاح!'
@@ -279,6 +275,43 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     return '?';
   }
 
+  /// Builds the avatar image, supporting both base64 data URIs and network URLs.
+  Widget _buildAvatarImage() {
+    final url = _photoUrl!;
+    final fallback = Center(
+      child: Text(
+        _userInitial,
+        style: GoogleFonts.cairo(
+          fontSize: 38,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    // Base64 data URI (free Firestore approach)
+    if (url.startsWith('data:image')) {
+      try {
+        final base64Str = url.split(',').last;
+        final bytes = base64Decode(base64Str);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => fallback,
+        );
+      } catch (_) {
+        return fallback;
+      }
+    }
+
+    // Legacy network URL (Firebase Storage or other)
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -408,20 +441,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
                   ),
                   child: ClipOval(
                     child: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                        ? Image.network(
-                            _photoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Center(
-                              child: Text(
-                                _userInitial,
-                                style: GoogleFonts.cairo(
-                                  fontSize: 38,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          )
+                        ? _buildAvatarImage()
                         : Center(
                             child: Text(
                               _userInitial,
