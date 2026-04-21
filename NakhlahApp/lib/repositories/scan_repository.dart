@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/scan_history_notifier.dart';
@@ -12,9 +13,10 @@ import '../models/scan_result.dart';
 /// Hybrid scan repository.
 ///
 /// Flow on every new scan:
-///   1. Save to [ScanHistoryNotifier] immediately (SharedPreferences) — instant UI.
-///   2. Upload captured image to Firebase Storage asynchronously.
-///   3. Write entry to `/users/{uid}/scan_history/{scanId}` in Firestore.
+///   1. Copy image to persistent documents dir so it survives OS temp cleanup.
+///   2. Save to [ScanHistoryNotifier] immediately (SharedPreferences) — instant UI.
+///   3. Upload captured image to Firebase Storage asynchronously.
+///   4. Write entry to `/users/{uid}/scan_history/{scanId}` in Firestore.
 ///
 /// On app start, [syncFromFirestore()] merges cloud history into local state
 /// so history survives device reinstalls and works across devices.
@@ -22,10 +24,10 @@ class ScanRepository {
   ScanRepository._();
   static final ScanRepository instance = ScanRepository._();
 
-  final _auth     = FirebaseAuth.instance;
-  final _storage  = FirebaseStorage.instance;
+  final _auth      = FirebaseAuth.instance;
+  final _storage   = FirebaseStorage.instance;
   final _firestore = FirebaseFirestore.instance;
-  final _uuid     = const Uuid();
+  final _uuid      = const Uuid();
 
   // ── Save a new scan ─────────────────────────────────────────────────────────
 
@@ -40,6 +42,9 @@ class ScanRepository {
     final scanId = _uuid.v4();
     final now    = DateTime.now();
 
+    // ── Step 0: Copy image to persistent app documents dir ──────────────────
+    final persistentPath = await _copyToPersistentDir(imageFile, scanId);
+
     // ── Step 1: local persist (instant, never blocks UI) ────────────────────
     final localEntry = ScanHistoryEntry(
       id: scanId,
@@ -52,8 +57,8 @@ class ScanRepository {
       carbs: result.carbs,
       fiber: result.fiber,
       potassium: result.potassium,
-      imagePath: imageFile.path,   // local temp path shown immediately
-      imageUrl: null,              // will be updated after upload
+      imagePath: persistentPath ?? imageFile.path, // persistent path preferred
+      imageUrl: null,                               // updated after upload
       scannedAt: now,
     );
     scanHistoryNotifier.add(localEntry);
@@ -62,6 +67,23 @@ class ScanRepository {
     _syncToFirebase(scanId: scanId, entry: localEntry, imageFile: imageFile);
 
     return scanId;
+  }
+
+  /// Copy image to `<Documents>/scan_images/<scanId>.<ext>` for persistence.
+  Future<String?> _copyToPersistentDir(File imageFile, String scanId) async {
+    try {
+      final docsDir = await getApplicationDocumentsDirectory();
+      final scansDir = Directory('${docsDir.path}/scan_images');
+      if (!scansDir.existsSync()) scansDir.createSync(recursive: true);
+      final ext = imageFile.path.split('.').last.toLowerCase();
+      final destPath = '${scansDir.path}/$scanId.$ext';
+      await imageFile.copy(destPath);
+      debugPrint('[ScanRepository] Image persisted at: $destPath');
+      return destPath;
+    } catch (e) {
+      debugPrint('[ScanRepository] Persistent copy failed (non-fatal): $e');
+      return null;
+    }
   }
 
   /// Upload image → Firestore. Runs in background — errors are logged only.

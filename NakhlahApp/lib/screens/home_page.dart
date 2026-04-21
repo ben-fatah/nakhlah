@@ -459,17 +459,26 @@ class _ScanCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.camera_alt_rounded,
-              color: Colors.grey.shade400,
-              size: 36,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.asset(
+              'assets/images/scan_promo.png',
+              width: 90,
+              height: 90,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.brown100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: AppColors.brown700,
+                  size: 36,
+                ),
+              ),
             ),
           ),
         ],

@@ -185,49 +185,141 @@ class AppLocalizations {
       isArabic ? 'لا توجد أصناف' : 'No varieties found';
   String get kcalLabel => isArabic ? 'سعرة' : 'kcal';
 
-  // Filter chip labels
+  // ── Filter chip labels ───────────────────────────────────────────────────
   String get filterAjwa => isArabic ? 'عجوة' : 'Ajwa';
+  String get filterAllig => isArabic ? 'علّيق' : 'Allig';
+  String get filterAmber => isArabic ? 'عنبر' : 'Amber';
+  String get filterAseel => isArabic ? 'أصيل' : 'Aseel';
+  String get filterDegletNour => isArabic ? 'دقلة نور' : 'Deglet Nour';
+  String get filterGalaxy => isArabic ? 'جالاكسي' : 'Galaxy';
+  String get filterKalmi => isArabic ? 'كلمي' : 'Kalmi';
+  String get filterKhorma => isArabic ? 'خرما' : 'Khorma';
   String get filterMedjool => isArabic ? 'مجدول' : 'Medjool';
+  String get filterMeneifi => isArabic ? 'منيفي' : 'Meneifi';
+  String get filterMuzafati => isArabic ? 'مظفطي' : 'Muzafati';
+  String get filterNabtatAli => isArabic ? 'نبتة علي' : 'Nabtat Ali';
+  String get filterRutab => isArabic ? 'رطب' : 'Rutab';
+  String get filterShaishe => isArabic ? 'شيشة' : 'Shaishe';
+  String get filterSokari => isArabic ? 'سكري' : 'Sokari';
+  String get filterSugaey => isArabic ? 'صقعي' : 'Sugaey';
+  String get filterZahidi => isArabic ? 'زاهدي' : 'Zahidi';
+
+  // ── Variety descriptions ─────────────────────────────────────────────────
+  String get descAjwa => isArabic
+      ? 'صنف داكن وطري من المدينة المنورة، يشتهر بحلاوته الكراميلية الغنية.'
+      : 'Soft, dark variety from Madinah; renowned for its rich, caramel-like sweetness.';
+  String get descAllig => isArabic
+      ? 'صنف شبه جاف بني فاتح من تونس، يُقدَّر بنكهة العسل الخفيفة.'
+      : 'Semi-dry, light-brown Tunisian variety prized for its mild honey flavour.';
+  String get descAmber => isArabic
+      ? 'تمرة كبيرة وطرية برائحة كراميل عميقة؛ كنز من موروث المدينة المنورة.'
+      : 'Large, tender date with a deep caramel aroma; a treasured Madinah heirloom.';
+  String get descAseel => isArabic
+      ? 'صنف ذهبي متماسك من باكستان بطعم حلو ومالتي مميز.'
+      : 'Firm, golden date from Pakistan with a distinctive sweet, malty taste.';
+  String get descDegletNour => isArabic
+      ? 'تمر شفاف وشبه جاف يُلقَّب بـ"ملكة التمور" في شمال أفريقيا.'
+      : 'Translucent, semi-dry date famed as the "Queen of Dates" across North Africa.';
+  String get descGalaxy => isArabic
+      ? 'تمر متماسك بني متوسط من القصيم بطعم حلو متوازن ونسيج ناعم.'
+      : 'Firm, medium-brown date from Al-Qassim with a balanced sweetness and smooth texture.';
+  String get descKalmi => isArabic
+      ? 'تمر نحيل أسود-بني من المدينة المنورة بحلاوة غنية ومكثفة.'
+      : 'Slender, black-brown date from Madinah with a rich, intense sweetness.';
+  String get descKhorma => isArabic
+      ? 'تمر صغير مجعد من شبه الجزيرة العربية بحلاوة ترابية دافئة.'
+      : 'Small, wrinkled dry date from the Arabian Peninsula with a warm, earthy sweetness.';
+  String get descMedjool => isArabic
+      ? 'تمر كبير وشهي يُلقَّب بـ"ملك التمور" لغناه الاستثنائي.'
+      : 'Large, luscious date called the "King of Dates" for its incredible richness.';
+  String get descMeneifi => isArabic
+      ? 'تمرة طرية عنبرية اللون من الرياض بحلاوة كراميلية رقيقة.'
+      : 'Soft, amber-toned date from Riyadh with a delicate caramel sweetness.';
+  String get descMuzafati => isArabic
+      ? 'تمر طري ورطب وداكن من بم بإيران؛ من أجود الأصناف في العالم.'
+      : 'Soft, moist, dark date from Bam, Iran; considered one of the finest in the world.';
+  String get descNabtatAli => isArabic
+      ? 'تمر متوسط الحجم وداكن من القصيم بحلاوة غنية وعميقة.'
+      : 'Medium-sized, dark date from Al-Qassim with a rich, deep sweetness.';
+  String get descRutab => isArabic
+      ? 'تمر طازج نصف ناضج يُحصد في ذروة نضجه؛ عصيري وخفيف الحلاوة.'
+      : 'Fresh semi-ripe date harvested at peak ripeness; juicy with a light natural sweetness.';
+  String get descShaishe => isArabic
+      ? 'تمرة رقيقة الجلد وفاخرة من الأحساء بحلاوة معقدة تشبه العسل.'
+      : 'Thin-skinned, premium date from Al-Ahsa with a complex, honey-like sweetness.';
+  String get descSokari => isArabic
+      ? 'الصنف السكري الاستثنائي من القصيم؛ حلاوة فائقة تذوب في الفم.'
+      : 'Extraordinary Sokari variety from Al-Qassim; melt-in-the-mouth sweetness.';
+  String get descSugaey => isArabic
+      ? 'تمر متماسك بني-أحمر من الرياض بقوام مقرمش ونكهة حلوة لطيفة.'
+      : 'Firm, reddish-brown date from Riyadh with a crisp texture and pleasant sweetness.';
+  String get descZahidi => isArabic
+      ? 'صنف شبه جاف ذهبي من العراق وإيران بحلاوة خفيفة وطعم مكسراتي.'
+      : 'Semi-dry, golden variety from Iraq and Iran with a mild, nutty sweetness.';
+
+  // ─── Legacy filter labels (kept for backward compatibility) ──────────────
   String get filterSukkari => isArabic ? 'سكري' : 'Sukkari';
   String get filterKhalas => isArabic ? 'خلاص' : 'Khalas';
   String get filterBarhi => isArabic ? 'برحي' : 'Barhi';
   String get filterSagai => isArabic ? 'صقعي' : 'Sagai';
-  String get filterGalaxy => isArabic ? 'جالاكسي' : 'Galaxy';
-  String get filterMeneifi => isArabic ? 'منيفي' : 'Meneifi';
-  String get filterNabtatAli => isArabic ? 'نبتة علي' : 'Nabtat Ali';
-  String get filterRutab => isArabic ? 'رطب' : 'Rutab';
-  String get filterShaishe => isArabic ? 'شيشة' : 'Shaishe';
 
-  // Variety names
+  // ── Variety names ────────────────────────────────────────────────────────
+  String get ajwaDates => isArabic ? 'عجوة المدينة' : 'Ajwa Al-Madinah';
+  String get alligDates => isArabic ? 'تمر علّيق' : 'Allig Dates';
+  String get amberDates => isArabic ? 'تمر عنبر' : 'Amber Dates';
+  String get aseelDates => isArabic ? 'تمر أصيل' : 'Aseel Dates';
+  String get degletNourDates => isArabic ? 'دقلة نور' : 'Deglet Nour';
+  String get galaxyDates => isArabic ? 'تمر جالاكسي' : 'Galaxy Dates';
+  String get kalmiDates => isArabic ? 'تمر كلمي' : 'Kalmi Dates';
+  String get khormaDates => isArabic ? 'تمر خرما' : 'Khorma Dates';
+  String get medjoolDates => isArabic ? 'مجدول فاخر' : 'Premium Medjool';
+  String get meneifiDates => isArabic ? 'تمر منيفي' : 'Meneifi Dates';
+  String get muzafatiDates => isArabic ? 'تمر مظفطي' : 'Muzafati Dates';
+  String get nabtatAliDates => isArabic ? 'تمر نبتة علي' : 'Nabtat Ali Dates';
+  String get rutabDates => isArabic ? 'رطب طازج' : 'Fresh Rutab';
+  String get shaisheDates => isArabic ? 'تمر شيشة' : 'Shaishe Dates';
+  String get sokariDates => isArabic ? 'تمر سكري' : 'Sokari Dates';
+  String get sugaeyDates => isArabic ? 'تمر صقعي' : 'Sugaey Dates';
+  String get zahidiDates => isArabic ? 'تمر زاهدي' : 'Zahidi Dates';
+
+  // ─── Legacy variety names (kept for backward compatibility) ──────────────
   String get ajwaAlMadinah => isArabic ? 'عجوة المدينة' : 'Ajwa Al-Madinah';
   String get premiumMedjool => isArabic ? 'مجدول فاخر' : 'Premium Medjool';
   String get sukkariMofatall => isArabic ? 'سكري مفتل' : 'Sukkari Mofatall';
   String get khalasAlAhsa => isArabic ? 'خلاص الأحساء' : 'Khalas Al-Ahsa';
   String get barhiGolden => isArabic ? 'برحي ذهبي' : 'Barhi Golden';
   String get sagaiDates => isArabic ? 'تمر صقعي' : 'Sagai Dates';
-  String get galaxyDates => isArabic ? 'تمر جالاكسي' : 'Galaxy Dates';
-  String get meneifiDates => isArabic ? 'تمر منيفي' : 'Meneifi Dates';
-  String get nabtatAliDates => isArabic ? 'تمر نبتة علي' : 'Nabtat Ali Dates';
-  String get rutabDates => isArabic ? 'رطب طازج' : 'Fresh Rutab';
-  String get shaisheDates => isArabic ? 'تمر شيشة' : 'Shaishe Dates';
 
-  // Variety origins
+  // ── Variety origins ──────────────────────────────────────────────────────
   String get originMadinah =>
       isArabic ? 'المدينة المنورة، السعودية' : 'Madinah, KSA';
-  String get originJericho => isArabic ? 'أريحا، فلسطين' : 'Jericho, Palestine';
-  String get originQassim => isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
-  String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
+  String get originQassim =>
+      isArabic ? 'القصيم، السعودية' : 'Al-Qassim, KSA';
   String get originRiyadh => isArabic ? 'الرياض، السعودية' : 'Riyadh, KSA';
+  String get originAhsa => isArabic ? 'الأحساء، السعودية' : 'Al-Ahsa, KSA';
+  String get originTunisiaAlgeria =>
+      isArabic ? 'تونس / الجزائر' : 'Tunisia / Algeria';
+  String get originSindh => isArabic ? 'السند، باكستان' : 'Sindh, Pakistan';
+  String get originArabianPeninsula =>
+      isArabic ? 'شبه الجزيرة العربية' : 'Arabian Peninsula';
+  String get originBamIran => isArabic ? 'بم، إيران' : 'Bam, Iran';
+  String get originIraqIran => isArabic ? 'العراق / إيران' : 'Iraq / Iran';
+  String get originMadinahQassim => isArabic
+      ? 'المدينة المنورة / القصيم، السعودية'
+      : 'Al-Madinah / Al-Qassim, KSA';
+  String get originAhsaQassim => isArabic
+      ? 'الأحساء / القصيم، السعودية'
+      : 'Al-Ahsa / Al-Qassim, KSA';
+
+  // ─── Legacy origins (kept for backward compatibility) ────────────────────
+  String get originJericho =>
+      isArabic ? 'أريحا، فلسطين' : 'Jericho, Palestine';
   String get originSaudiArabia =>
       isArabic ? 'المملكة العربية السعودية' : 'Saudi Arabia';
   String get originGulfRegion =>
       isArabic ? 'منطقة الخليج' : 'Gulf Region';
   String get originIraq =>
       isArabic ? 'العراق / القصيم، السعودية' : 'Iraq / Al-Qassim, KSA';
-  String get originMadinahQassim =>
-      isArabic ? 'المدينة المنورة / القصيم، السعودية' : 'Al-Madinah / Al-Qassim, KSA';
-  String get originAhsaQassim =>
-      isArabic ? 'الأحساء / القصيم، السعودية' : 'Al-Ahsa / Al-Qassim, KSA';
 
   // ── Notifications ────────────────────────────────────────────────────────
   String get notifications => isArabic ? 'الإشعارات' : 'Notifications';
@@ -239,13 +331,15 @@ class AppLocalizations {
 
   // ── History ──────────────────────────────────────────────────────────────
   String get scanHistory => isArabic ? 'سجل المسح' : 'Scan History';
-  String get noScansYet => isArabic ? 'لا توجد عمليات مسح بعد' : 'No scans yet';
+  String get noScansYet =>
+      isArabic ? 'لا توجد عمليات مسح بعد' : 'No scans yet';
   String get noScansYetSubtitle => isArabic
       ? 'امسح ثمرة تمر لرؤية سجلك هنا'
       : 'Scan a date fruit to see your history here';
 
   // ── Product Detail ────────────────────────────────────────────────────────
-  String get productDetails => isArabic ? 'تفاصيل المنتج' : 'Product Details';
+  String get productDetails =>
+      isArabic ? 'تفاصيل المنتج' : 'Product Details';
   String get description => isArabic ? 'الوصف' : 'Description';
   String get sellers => isArabic ? 'البائعون' : 'Sellers';
   String get addToCart => isArabic ? 'أضف إلى السلة' : 'Add to Cart';
