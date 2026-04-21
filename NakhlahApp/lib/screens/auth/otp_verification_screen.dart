@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/material.dart';
@@ -148,10 +149,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         options: Options(headers: {
           'Authorization': 'Bearer $_authenticaApiKey',
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         }),
-        data: {
+        data: jsonEncode({
           'phone': formattedPhone,
-        },
+        }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -189,11 +191,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         options: Options(headers: {
           'Authorization': 'Bearer $_authenticaApiKey',
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         }),
-        data: {
+        data: jsonEncode({
           'phone': formattedPhone,
           'code': _enteredOtp,
-        },
+        }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
