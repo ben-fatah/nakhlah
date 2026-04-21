@@ -85,52 +85,7 @@ class _SignUpScreenState extends State<SignUpScreen>
     });
   }
 
-  // ── Sign-Up Logic ─────────────────────────────────────────────────────────
-  Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text.trim(),
-      );
-
-      // Set the display name on the Firebase Auth profile
-      await credential.user!.updateDisplayName(_nameCtrl.text.trim());
-      await credential.user!.reload();
-
-      // Save user to Firestore via repository
-      await _userRepo.ensureUserExists(
-        AppUser(
-          uid: credential.user!.uid,
-          fullName: _nameCtrl.text.trim(),
-          email: _emailCtrl.text.trim(),
-        ),
-      );
-
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-          (_) => false,
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      AppLogger.e('FirebaseAuthException — code: ${e.code}');
-      if (mounted) _showSnackBar(e.message ?? 'Sign-up failed (${e.code}).');
-    } catch (e, st) {
-      AppLogger.e('Unexpected sign-up error: $e', error: e, stackTrace: st);
-      if (mounted) _showSnackBar('Something went wrong. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // ── Phone-first Sign-Up Logic ──────────────────────────────────
-  /// Creates the Firebase Auth account then pushes the OTP screen.
-  /// On OTP success the [onVerified] callback saves Firestore + navigates home.
-  Future<void> _signUpWithPhone() async {
+    Future<void> _signUpWithPhone() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -170,12 +125,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                 );
               } catch (e) {
                 AppLogger.e('[SignUp] Firestore save failed: $e');
-              }
-              if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const HomePage()),
-                  (_) => false,
-                );
               }
             },
           ),
@@ -513,25 +462,6 @@ class _SignUpScreenState extends State<SignUpScreen>
                     ),
                   ),
                   const SizedBox(height: 10),
-
-                  // ── Skip phone verification (fallback) ──────────────────
-                  Center(
-                    child: TextButton(
-                      onPressed: _isLoading ? null : _signUp,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.hintColor,
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context).skipPhoneVerification,
-                        style: GoogleFonts.cairo(
-                          fontSize: 13,
-                          color: AppColors.hintColor,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
 
 
                   // ── Terms & Privacy ─────────────────────────────────────

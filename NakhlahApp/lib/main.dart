@@ -9,11 +9,13 @@ import 'package:app_links/app_links.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
+import 'providers/user_provider.dart';
 import 'domain/favorites_notifier.dart';
 import 'domain/cart_notifier.dart';
 import 'domain/scan_history_notifier.dart';
 import 'repositories/onboarding_repository.dart';
 import 'repositories/scan_repository.dart';
+import 'repositories/user_repository.dart';
 import 'services/date_metadata.dart';
 import 'services/local_inference_service.dart';
 import 'theme/app_colors.dart';
@@ -65,6 +67,25 @@ void main() async {
     }
   } catch (e) {
     AppLogger.e('[DeepLink] getInitialLink error: $e');
+  }
+
+  // Load the current user profile if signed in before running the app
+  final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+  final isOtpVerified = prefs.getBool('isOtpVerified') ?? false;
+  final verifiedPhone = prefs.getString('verifiedPhone');
+
+  if (currentUserUid != null && isOtpVerified && verifiedPhone != null && verifiedPhone.isNotEmpty) {
+    AppLogger.d('[Init] Fetching user profile manually by phone $verifiedPhone');
+    final repo = UserRepository();
+    final user = await repo.getUserByPhone(verifiedPhone);
+    if (user != null) {
+       userProvider.setCurrentUser(user);
+       userProvider.setOtpVerified(true);
+    } else {
+       await FirebaseAuth.instance.signOut();
+    }
+  } else if (currentUserUid != null) {
+    await FirebaseAuth.instance.signOut();
   }
 
   runApp(NakhlahApp(onboardingRepo: onboardingRepo));

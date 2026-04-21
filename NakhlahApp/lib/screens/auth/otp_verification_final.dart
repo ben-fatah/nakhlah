@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -110,20 +109,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
   // â”€â”€ Firebase: send OTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  String _formatPhoneNumber(String phone) {
-    String p = phone.trim();
-    if (p.startsWith('+966')) {
-      p = p.substring(4);
-    } else if (p.startsWith('00966')) {
-      p = p.substring(5);
-    } else if (p.startsWith('966')) {
-      p = p.substring(3);
-    } else if (p.startsWith('0')) {
-      p = p.substring(1);
-    }
-    return '+966$p';
-  }
-
   Future<void> _sendOtp({bool isResend = false}) async {
     if (mounted) {
       setState(() {
@@ -139,39 +124,27 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       if (mounted) _focusNodes.first.requestFocus();
     }
 
-    final formattedPhone = _formatPhoneNumber(widget.phoneNumber);
-    AppLogger.d('[OTP] Sending Authentica OTP to $formattedPhone');
+    AppLogger.d('[OTP] Sending Firebase OTP to ${widget.phoneNumber}');
 
-    try {
-      final response = await _dio.post(
-        'https://api.authentica.sa/api/otp/send',
-        options: Options(headers: {
-          'Authorization': 'Bearer $_authenticaApiKey',
-          'Content-Type': 'application/json',
-        }),
-        data: {
-          'phone': formattedPhone,
-        },
-      );
+    await _auth.verifyPhoneNumber(
+      phoneNumber: widget.phoneNumber,
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (!mounted) return;
-        setState(() {
-          _isSending = false;
-        });
-        _startResendTimer();
-      } else {
-        throw Exception('Failed to send OTP code');
-      }
-    } catch (e) {
-      AppLogger.e('[OTP] sendOtp error: $e');
-      if (!mounted) return;
-      setState(() {
-        _isSending = false;
-        _errorMsg = _friendlyVerificationError('network-request-failed');
-      });
-    }
-  }
+      // â”€â”€ Resend token: prevents duplicate SMS charges on retry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      forceResendingToken: isResend ? _resendToken : null,
+
+      // â”€â”€ Timeout: how long Firebase waits for auto-retrieval â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      timeout: const Duration(seconds: 60),
+
+      // â”€â”€ Android: SMS auto-retrieved, sign in immediately â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        AppLogger.d('[OTP] Auto-verified (Android SMS retrieval)');
+        await _signInWithCredential(credential);
+      },
+
+      // â”€â”€ Verification failed (wrong number, quota, etc.) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      verificationFailed: (FirebaseAuthException e) {
+        AppLogger.e('[OTP] verificationFailed: ${e.code} â€” ${e.message}');
+        if (!m  // â”€â”€ Authentica: verify OTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _verifyOtp() async {
     if (!_otpComplete) return;
@@ -181,21 +154,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       _errorMsg = null;
     });
 
-    final formattedPhone = _formatPhoneNumber(widget.phoneNumber);
-
     try {
       final response = await _dio.post(
         'https://api.authentica.sa/api/otp/verify',
         options: Options(headers: {
-          'Authorization': 'Bearer $_authenticaApiKey',
+          'Authorization': 'Bearer \$_authenticaApiKey',
           'Content-Type': 'application/json',
         }),
         data: {
-          'phone': formattedPhone,
+          'phone': widget.phoneNumber,
           'code': _enteredOtp,
         },
       );
 
+      // Assume 200 or 201 is success on authentica validation
       if (response.statusCode == 200 || response.statusCode == 201) {
          AppLogger.d('[OTP] Authentica Verified!');
          await _handleSuccessfulVerification();
@@ -203,10 +175,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
          throw Exception('Invalid Verification Code');
       }
     } catch (e) {
-      AppLogger.e('[OTP] verifyOtp error: $e');
+      AppLogger.e('[OTP] verifyOtp error: \$e');
       if (!mounted) return;
       setState(() {
         _isVerifying = false;
+        // Standard user friendly message
         _errorMsg = 'Incorrect code. Please check and try again.';
       });
     }
@@ -214,56 +187,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
   Future<void> _handleSuccessfulVerification() async {
     try {
-      final formattedPhone = _formatPhoneNumber(widget.phoneNumber);
-
-      // Execute onVerified first if we have one (SignUp uses this to write the user doc)
       if (widget.onVerified != null) {
         await widget.onVerified!();
-      }
-
-      // Ensure Firebase Session. If standalone phone sign-in, login anonymously to read DB
-      if (FirebaseAuth.instance.currentUser == null) {
-        await FirebaseAuth.instance.signInAnonymously();
-      }
-
-      // Query Firestore
-      final userRepo = UserRepository();
-      final appUser = await userRepo.getUserByPhone(formattedPhone);
-
-      if (appUser != null) {
-        // Prevent Mixups - update user provider directly
-        userProvider.setCurrentUser(appUser);
-        userProvider.setOtpVerified(true);
-
-        // Session persistence
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isOtpVerified', true);
-        await prefs.setString('verifiedPhone', formattedPhone);
-
-        if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-          (route) => false,
-        );
       } else {
-        // User not found in DB! Show error. Cannot enter app.
-        if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Account not found. Please sign up to create a profile.')),
-           );
-        }
-      }
-    } catch (e) {
-      AppLogger.e('Error handling successful verification: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
+        // Phone-Only Sign In fallback. We must 'Silent Login' by anonymously logging in and fetching profile
+        AppLogger.d('Finding user by phone: \${widget.phoneNumber}');
+        final docs = await FirebaseFirestore.instance.collection('users').where('pho    }
   }
 
-  // Resend timer
+  // â”€â”€ Resend timer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   void _startResendTimer() {
     _resendTimer?.cancel();
     setState(() => _secondsLeft = _resendSeconds);
@@ -277,7 +209,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         }
       });
     });
-  }
+  }€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   String _friendlyVerificationError(String code) {
     switch (code) {
@@ -546,7 +478,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               } else if (val.isEmpty && i > 0) {
                 _focusNodes[i - 1].requestFocus();
               }
-              // Auto-verify when all 4 digits entered
+              // Auto-verify when all 6 digits entered
               if (_otpComplete && !_isVerifying) {
                 _verifyOtp();
               }

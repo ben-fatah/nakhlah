@@ -46,6 +46,18 @@ class UserRepository {
     }
   }
 
+  /// Fetch a user profile by [phone].
+  Future<AppUser?> getUserByPhone(String phone) async {
+    try {
+      final snapshot = await _usersRef.where('phone', isEqualTo: phone).limit(1).get();
+      if (snapshot.docs.isEmpty) return null;
+      return AppUser.fromFirestore(snapshot.docs.first);
+    } catch (e, st) {
+      AppLogger.e('[UserRepository] getUserByPhone failed', error: e, stackTrace: st);
+      return null;
+    }
+  }
+
   // ── Write ─────────────────────────────────────────────────────────────────
 
   /// Idempotent user creation.

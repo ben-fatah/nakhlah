@@ -12,6 +12,7 @@ import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
 import 'home_page.dart';
 import 'auth/otp_verification_screen.dart';
+import '../repositories/user_repository.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -77,11 +78,19 @@ class _SignInScreenState extends State<SignInScreen>
 
       AppLogger.d('[SignIn] Success');
 
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-          (_) => false,
-        );
+      final userRepo = UserRepository();
+      final appUser = await userRepo.getUser(_auth.currentUser!.uid);
+      
+      if (appUser != null && appUser.phone.isNotEmpty) {
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OtpVerificationScreen(phoneNumber: appUser.phone),
+            ),
+          );
+        }
+      } else {
+        throw Exception('No phone number attached to this account.');
       }
     } on FirebaseAuthException catch (e) {
       AppLogger.e('[SignIn ERROR] Code: ${e.code}');
