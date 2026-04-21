@@ -1,155 +1,101 @@
 {
-  "ajwa": {
+  "Ajwa": {
     "nameAr": "عجوة",
-    "originEn": "Madinah, Saudi Arabia",
-    "originAr": "المدينة المنورة، المملكة العربية السعودية",
-    "calories": 282,
-    "carbs": 75,
-    "fiber": 8,
-    "potassium": 696
-  },
-  "allig": {
-    "nameAr": "عليق",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 277,
-    "carbs": 74,
-    "fiber": 7,
-    "potassium": 650
-  },
-  "amber": {
-    "nameAr": "عنبر",
-    "originEn": "Al-Ahsa, Saudi Arabia",
-    "originAr": "الأحساء، المملكة العربية السعودية",
-    "calories": 271,
-    "carbs": 73,
-    "fiber": 6,
-    "potassium": 640
-  },
-  "aseel": {
-    "nameAr": "عاصل",
-    "originEn": "Pakistan / Saudi Arabia",
-    "originAr": "باكستان / المملكة العربية السعودية",
-    "calories": 275,
-    "carbs": 73,
-    "fiber": 7,
-    "potassium": 645
-  },
-  "deglet_nour": {
-    "nameAr": "دقلة نور",
-    "originEn": "Algeria / Tunisia",
-    "originAr": "الجزائر / تونس",
-    "calories": 282,
-    "carbs": 75,
-    "fiber": 8,
-    "potassium": 696
-  },
-  "galaxy": {
-    "nameAr": "جلاكسي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 275,
-    "carbs": 73,
-    "fiber": 7,
-    "potassium": 650
-  },
-  "kalmi": {
-    "nameAr": "كلمي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 274,
-    "carbs": 73,
-    "fiber": 7,
-    "potassium": 640
-  },
-  "khorma": {
-    "nameAr": "خرما",
-    "originEn": "Iran / Saudi Arabia",
-    "originAr": "إيران / المملكة العربية السعودية",
-    "calories": 277,
-    "carbs": 74,
-    "fiber": 7,
-    "potassium": 650
-  },
-  "medjool": {
-    "nameAr": "مجدول",
-    "originEn": "Morocco / USA",
-    "originAr": "المغرب / الولايات المتحدة",
+    "originEn": "Al-Madinah, KSA",
+    "originAr": "المدينة المنورة، السعودية",
     "calories": 277,
     "carbs": 75,
     "fiber": 7,
     "potassium": 696
   },
-  "meneifi": {
-    "nameAr": "منيفي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 275,
-    "carbs": 73,
-    "fiber": 7,
-    "potassium": 640
-  },
-  "muzafati": {
-    "nameAr": "مظفتي",
-    "originEn": "Iran",
-    "originAr": "إيران",
-    "calories": 278,
-    "carbs": 74,
-    "fiber": 7,
-    "potassium": 648
-  },
-  "nabtat_ali": {
-    "nameAr": "نبتة علي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 273,
-    "carbs": 73,
-    "fiber": 7,
-    "potassium": 638
-  },
-  "rutab": {
-    "nameAr": "رطب",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
-    "calories": 145,
-    "carbs": 37,
-    "fiber": 4,
-    "potassium": 364
-  },
-  "shaishe": {
-    "nameAr": "شيشة",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+  "Galaxy": {
+    "nameAr": "جالاكسي",
+    "originEn": "Al-Qassim, KSA",
+    "originAr": "القصيم، السعودية",
     "calories": 270,
     "carbs": 72,
+    "fiber": 6,
+    "potassium": 650
+  },
+  "Medjool": {
+    "nameAr": "مجدول",
+    "originEn": "Al-Madinah, KSA",
+    "originAr": "المدينة المنورة، السعودية",
+    "calories": 277,
+    "carbs": 75,
     "fiber": 7,
-    "potassium": 635
+    "potassium": 696
   },
-  "sokari": {
-    "nameAr": "سكري",
-    "originEn": "Al-Qassim, Saudi Arabia",
-    "originAr": "القصيم، المملكة العربية السعودية",
-    "calories": 286,
-    "carbs": 76,
-    "fiber": 8,
-    "potassium": 700
+  "Meneifi": {
+    "nameAr": "منيفي",
+    "originEn": "Riyadh, KSA",
+    "originAr": "الرياض، السعودية",
+    "calories": 265,
+    "carbs": 70,
+    "fiber": 5,
+    "potassium": 620
   },
-  "sugaey": {
-    "nameAr": "سقعي",
-    "originEn": "Saudi Arabia",
-    "originAr": "المملكة العربية السعودية",
+  "Nabtat Ali": {
+    "nameAr": "نبتة علي",
+    "originEn": "Al-Qassim, KSA",
+    "originAr": "القصيم، السعودية",
+    "calories": 268,
+    "carbs": 71,
+    "fiber": 6,
+    "potassium": 630
+  },
+  "Rutab": {
+    "nameAr": "رطب",
+    "originEn": "Al-Madinah / Al-Qassim, KSA",
+    "originAr": "المدينة المنورة / القصيم، السعودية",
+    "calories": 142,
+    "carbs": 38,
+    "fiber": 4,
+    "potassium": 380
+  },
+  "Shaishe": {
+    "nameAr": "شيشة",
+    "originEn": "Al-Ahsa / Al-Qassim, KSA",
+    "originAr": "الأحساء / القصيم، السعودية",
     "calories": 272,
     "carbs": 73,
-    "fiber": 7,
-    "potassium": 638
+    "fiber": 6,
+    "potassium": 655
   },
-  "zahidi": {
-    "nameAr": "زاهدي",
-    "originEn": "Iraq / Iran",
-    "originAr": "العراق / إيران",
-    "calories": 274,
+  "Sokari": {
+    "nameAr": "سكري",
+    "originEn": "Al-Qassim, KSA",
+    "originAr": "القصيم، السعودية",
+    "calories": 320,
+    "carbs": 85,
+    "fiber": 8,
+    "potassium": 720
+  },
+  "Sugaey": {
+    "nameAr": "صقعي",
+    "originEn": "Riyadh, KSA",
+    "originAr": "الرياض، السعودية",
+    "calories": 290,
+    "carbs": 78,
+    "fiber": 7,
+    "potassium": 680
+  },
+  "Khalas": {
+    "nameAr": "خلاص",
+    "originEn": "Al-Ahsa, KSA",
+    "originAr": "الأحساء، السعودية",
+    "calories": 300,
+    "carbs": 80,
+    "fiber": 7,
+    "potassium": 690
+  },
+  "Barhi": {
+    "nameAr": "برحي",
+    "originEn": "Iraq / Al-Qassim, KSA",
+    "originAr": "العراق / القصيم، السعودية",
+    "calories": 282,
     "carbs": 73,
-    "fiber": 5,
-    "potassium": 636
+    "fiber": 7,
+    "potassium": 650
   }
 }
