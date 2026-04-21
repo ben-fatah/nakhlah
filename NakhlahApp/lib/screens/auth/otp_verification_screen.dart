@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../theme/app_colors.dart';
 import '../../core/logger.dart';
+import '../../services/auth_service.dart';
 import '../home_page.dart';
 
 /// Screen that handles Firebase Phone Auth OTP verification.
@@ -19,7 +20,7 @@ import '../home_page.dart';
 /// ```
 ///
 /// [phoneNumber] must be in E.164 format (e.g. +966501234567).
-/// [onVerified] optional callback invoked after successful verification
+/// [onVerified] optional callback invoked after successful Firebase verification
 /// instead of the default push-to-HomePage behaviour (useful when called
 /// from sign-up to continue profile creation).
 class OtpVerificationScreen extends StatefulWidget {
@@ -40,32 +41,24 @@ class OtpVerificationScreen extends StatefulWidget {
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     with SingleTickerProviderStateMixin {
-  // ── Authentica API ────────────────────────────────────────────────────────
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://api.authentica.sa/api/v2/',
-    headers: {
-      'X-Authorization': r'$2y$10$msQf48nCdkmu7pU9n0W9VOgw0pSrwSe7vD09ioaxTepB7i1A5AGte',
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-  ));
+  // ── Firebase Phone Auth ───────────────────────────────────────────────────
+  final _auth = FirebaseAuth.instance;
 
-  String _formatPhone(String phone) {
-    if (phone.startsWith('05')) {
-      return '+966${phone.substring(1)}';
-    }
-    return phone;
-  }
+  /// Verification ID received in [FirebaseAuth.verifyPhoneNumber] codeSent callback.
+  String? _verificationId;
 
-  // ── OTP boxes ─────────────────────────────────────────────────────────────
-  static const int _otpLength = 4;
+  /// Resend token to avoid duplicate SMS charges on retry.
+  int? _resendToken;
+
+  // ── OTP boxes — Firebase always sends 6-digit codes ───────────────────────
+  static const int _otpLength = 6;
   final List<TextEditingController> _otpControllers =
       List.generate(_otpLength, (_) => TextEditingController());
   final List<FocusNode> _focusNodes =
       List.generate(_otpLength, (_) => FocusNode());
 
   // ── State ─────────────────────────────────────────────────────────────────
-  bool _isSending = true;   // true while Firebase initiates the call
+  bool _isSending = true;    // true while Firebase initiates the phone auth
   bool _isVerifying = false;
   String? _errorMsg;
 
@@ -79,9 +72,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
   late final Animation<double> _fadeIn;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  String get _enteredOtp =>
-      _otpControllers.map((c) => c.text).join();
-
+  String get _enteredOtp => _otpControllers.map((c) => c.text).join();
   bool get _otpComplete => _enteredOtp.length == _otpLength;
 
   // =========================================================================
@@ -111,51 +102,75 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     super.dispose();
   }
 
-  // ── Authentica: send OTP ──────────────────────────────────────────────────
+  // ── Firebase: send OTP ────────────────────────────────────────────────────
+
   Future<void> _sendOtp({bool isResend = false}) async {
-    setState(() {
-      _isSending = true;
-      _errorMsg = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isSending = true;
+        _errorMsg = null;
+      });
+    }
 
     if (isResend) {
-      // Clear existing input on resend
       for (final c in _otpControllers) {
         c.clear();
       }
-      _focusNodes.first.requestFocus();
+      if (mounted) _focusNodes.first.requestFocus();
     }
 
-    try {
-      final phone = _formatPhone(widget.phoneNumber);
-      AppLogger.d('[OTP] Sending OTP via Authentica to $phone');
-      
-      await _dio.post('send-otp', data: {
-        "method": "sms",
-        "phone": phone,
-      });
+    AppLogger.d('[OTP] Sending Firebase OTP to ${widget.phoneNumber}');
 
-      if (mounted) {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: widget.phoneNumber,
+
+      // ── Resend token: prevents duplicate SMS charges on retry ────────────
+      forceResendingToken: isResend ? _resendToken : null,
+
+      // ── Timeout: how long Firebase waits for auto-retrieval ──────────────
+      timeout: const Duration(seconds: 60),
+
+      // ── Android: SMS auto-retrieved, sign in immediately ─────────────────
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        AppLogger.d('[OTP] Auto-verified (Android SMS retrieval)');
+        await _signInWithCredential(credential);
+      },
+
+      // ── Verification failed (wrong number, quota, etc.) ───────────────────
+      verificationFailed: (FirebaseAuthException e) {
+        AppLogger.e('[OTP] verificationFailed: ${e.code} — ${e.message}');
+        if (!mounted) return;
         setState(() {
+          _isSending = false;
+          _errorMsg = _friendlyVerificationError(e.code);
+        });
+      },
+
+      // ── SMS sent — store verificationId + resendToken ────────────────────
+      codeSent: (String verificationId, int? resendToken) {
+        AppLogger.d('[OTP] codeSent — verificationId received');
+        if (!mounted) return;
+        setState(() {
+          _verificationId = verificationId;
+          _resendToken = resendToken;
           _isSending = false;
         });
         _startResendTimer();
         if (!isResend) _focusNodes.first.requestFocus();
-      }
-    } catch (e, st) {
-      AppLogger.e('[OTP] Unexpected error during send-otp', error: e, stackTrace: st);
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-          _errorMsg = 'Failed to send OTP. Please try again.';
-        });
-      }
-    }
+      },
+
+      // ── Auto-retrieval timeout (not an error; user enters manually) ───────
+      codeAutoRetrievalTimeout: (String verificationId) {
+        AppLogger.d('[OTP] codeAutoRetrievalTimeout');
+        _verificationId ??= verificationId;
+      },
+    );
   }
 
-  // ── Authentica: verify OTP ────────────────────────────────────────────────
+  // ── Firebase: verify OTP ─────────────────────────────────────────────────
+
   Future<void> _verifyOtp() async {
-    if (!_otpComplete) return;
+    if (!_otpComplete || _verificationId == null) return;
 
     setState(() {
       _isVerifying = true;
@@ -163,13 +178,50 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
 
     try {
-      final phone = _formatPhone(widget.phoneNumber);
-      await _dio.post('verify-otp', data: {
-        "phone": phone,
-        "otp": _enteredOtp,
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: _enteredOtp,
+      );
+      await _signInWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      AppLogger.e('[OTP] verifyOtp FirebaseAuthException: ${e.code}');
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _errorMsg = _friendlyVerifyError(e.code);
       });
+    } catch (e, st) {
+      AppLogger.e('[OTP] verifyOtp unexpected error', error: e, stackTrace: st);
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _errorMsg = 'Verification failed. Please try again.';
+      });
+    }
+  }
 
-      AppLogger.d('[OTP] Verification succeeded via Authentica.');
+  /// Signs into Firebase with [credential] and navigates on success.
+  ///
+  /// Handles both auto-verified (Android) and manual code entry paths.
+  Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
+    try {
+      // If a user is already signed in (email/password created account first
+      // during sign-up with phone), link the phone credential instead of
+      // creating a new account.
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        AppLogger.d('[OTP] Linking phone credential to existing account');
+        await currentUser.linkWithCredential(credential);
+      } else {
+        AppLogger.d('[OTP] Signing in with phone credential');
+        await _auth.signInWithCredential(credential);
+      }
+
+      // Ensure Firestore user document is created / updated
+      await AuthService.ensureUserDocument();
+
+      AppLogger.d('[OTP] Firebase phone auth succeeded.');
+
       if (!mounted) return;
 
       if (widget.onVerified != null) {
@@ -180,21 +232,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           (_) => false,
         );
       }
-    } catch (e, st) {
-      AppLogger.e('[OTP] Verification failed', error: e, stackTrace: st);
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Incorrect OTP code. Please try again.'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
+    } on FirebaseAuthException catch (e) {
+      AppLogger.e('[OTP] signInWithCredential failed: ${e.code}');
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _errorMsg = _friendlyVerifyError(e.code);
+      });
     }
   }
 
@@ -203,10 +247,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     _resendTimer?.cancel();
     setState(() => _secondsLeft = _resendSeconds);
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
+      if (!mounted) { t.cancel(); return; }
       setState(() {
         if (_secondsLeft > 0) {
           _secondsLeft--;
@@ -217,7 +258,39 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     });
   }
 
+  // ── Error helpers ─────────────────────────────────────────────────────────
 
+  String _friendlyVerificationError(String code) {
+    switch (code) {
+      case 'invalid-phone-number':
+        return 'The phone number is invalid. Please go back and re-enter it.';
+      case 'too-many-requests':
+        return 'Too many OTP requests. Please wait a few minutes and try again.';
+      case 'quota-exceeded':
+        return 'SMS quota exceeded. Please try again later.';
+      case 'network-request-failed':
+        return 'Network error. Please check your connection.';
+      default:
+        return 'Could not send OTP ($code). Please try again.';
+    }
+  }
+
+  String _friendlyVerifyError(String code) {
+    switch (code) {
+      case 'invalid-verification-code':
+        return 'Incorrect code. Please check and try again.';
+      case 'session-expired':
+        return 'The code has expired. Tap "Resend" to get a new one.';
+      case 'credential-already-in-use':
+        return 'This phone number is already linked to another account.';
+      case 'provider-already-linked':
+        return 'Phone number already linked to this account.';
+      case 'network-request-failed':
+        return 'Network error. Please check your connection.';
+      default:
+        return 'Verification failed ($code). Please try again.';
+    }
+  }
 
   // =========================================================================
   // UI
@@ -282,7 +355,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                       height: 1.5,
                     ),
                     children: [
-                      const TextSpan(text: 'A 4-digit code was sent to\n'),
+                      const TextSpan(text: 'A 6-digit code was sent to\n'),
                       TextSpan(
                         text: widget.phoneNumber,
                         style: GoogleFonts.cairo(
@@ -402,15 +475,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     );
   }
 
-  // ── OTP digit boxes ────────────────────────────────────────────────────────
+  // ── OTP digit boxes — 6 digits for Firebase ────────────────────────────────
   Widget _buildOtpBoxes() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(_otpLength, (i) {
         return Container(
-          width: 48,
-          height: 58,
-          margin: const EdgeInsets.symmetric(horizontal: 5),
+          width: 44,
+          height: 56,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
           child: TextFormField(
             controller: _otpControllers[i],
             focusNode: _focusNodes[i],
@@ -450,13 +523,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
             ),
             onChanged: (val) {
               if (val.length == 1 && i < _otpLength - 1) {
-                // Move to next box
                 _focusNodes[i + 1].requestFocus();
               } else if (val.isEmpty && i > 0) {
-                // Delete — move to previous box
                 _focusNodes[i - 1].requestFocus();
               }
-              // Auto-verify when all digits entered
+              // Auto-verify when all 6 digits entered
               if (_otpComplete && !_isVerifying) {
                 _verifyOtp();
               }

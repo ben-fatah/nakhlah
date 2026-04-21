@@ -102,7 +102,7 @@ class _SignUpScreenState extends State<SignUpScreen>
       await credential.user!.reload();
 
       // Save user to Firestore via repository
-      await _userRepo.saveUser(
+      await _userRepo.ensureUserExists(
         AppUser(
           uid: credential.user!.uid,
           fullName: _nameCtrl.text.trim(),
@@ -159,7 +159,7 @@ class _SignUpScreenState extends State<SignUpScreen>
             onVerified: () async {
               // Link phone credential to the new account & save to Firestore
               try {
-                await _userRepo.saveUser(
+                await _userRepo.ensureUserExists(
                   AppUser(
                     uid: credential.user!.uid,
                     fullName: _nameCtrl.text.trim(),

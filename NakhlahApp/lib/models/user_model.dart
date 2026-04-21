@@ -43,11 +43,29 @@ class AppUser {
     );
   }
 
-  /// Serialize to a Firestore-compatible map.
+  /// Full serialization for NEW user document creation.
   ///
-  /// Uses [SetOptions(merge: true)] friendly format — timestamps are
-  /// replaced with server timestamps.
-  Map<String, dynamic> toFirestore() {
+  /// Only call this on first write — includes [createdAt] as a server
+  /// timestamp. Subsequent updates must use [toFirestoreUpdate()] to avoid
+  /// overwriting the original creation time.
+  Map<String, dynamic> toFirestoreCreate() {
+    return {
+      'fullName': fullName,
+      'email': email,
+      'photoUrl': photoUrl,
+      'provider': provider,
+      'phone': phone,
+      'role': role,
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastSignIn': FieldValue.serverTimestamp(),
+    };
+  }
+
+  /// Partial serialization for UPDATES to an existing user document.
+  ///
+  /// Deliberately omits [createdAt] so the original timestamp is never
+  /// overwritten. Safe to call with [SetOptions(merge: true)].
+  Map<String, dynamic> toFirestoreUpdate() {
     return {
       'fullName': fullName,
       'email': email,
@@ -56,7 +74,6 @@ class AppUser {
       'phone': phone,
       'role': role,
       'lastSignIn': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
     };
   }
 

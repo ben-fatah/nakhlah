@@ -14,14 +14,14 @@ import 'date_metadata.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/// Asset filename of the opset-11 / IR-6 compatible ONNX model.
-/// Re-exported from nakhlah_model_v2_final.pth with dynamo=False, opset=11.
-const String _kModelAsset = 'assets/models/nakhlah_v2_compat.onnx';
+/// Asset path of the robust v1 ONNX model (EfficientNet-B2, 17 classes).
+/// Exported from nakhlah_robust_v1_best.pth with opset=11, IR=9.
+const String _kModelAsset = 'assets/models/nakhlah_robust_v1.onnx';
 
 /// Name used when extracting the model to the documents directory.
 /// Bump this name whenever the model file changes so the sentinel forces
 /// re-extraction and the old stale file on-device is replaced.
-const String _kModelFileName = 'nakhlah_v2_compat.onnx';
+const String _kModelFileName = 'nakhlah_robust_v1.onnx';
 
 /// Sentinel file written alongside the model so we can detect a stale extract.
 /// Contents = model asset key. If it doesn't match, we delete + re-extract.
@@ -39,9 +39,12 @@ const List<double> _kMean = [0.485, 0.456, 0.406];
 const List<double> _kStd  = [0.229, 0.224, 0.225];
 
 /// Class labels in the same order as model output logits.
+/// Must exactly match the training order from nakhlah_robust_v1_metadata.json.
 const List<String> _kClassNames = [
-  'Ajwa', 'Galaxy', 'Medjool', 'Meneifi',
-  'Nabtat Ali', 'Rutab', 'Shaishe', 'Sokari', 'Sugaey',
+  'ajwa', 'allig', 'amber', 'aseel', 'deglet_nour',
+  'galaxy', 'kalmi', 'khorma', 'medjool', 'meneifi',
+  'muzafati', 'nabtat_ali', 'rutab', 'shaishe',
+  'sokari', 'sugaey', 'zahidi',
 ];
 
 /// How long to wait for a single inference before declaring a timeout.

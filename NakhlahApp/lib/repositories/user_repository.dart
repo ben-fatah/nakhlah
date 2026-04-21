@@ -2,8 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/user_model.dart';
+import '../core/logger.dart';
 
 /// Repository encapsulating all Firestore operations on the `users` collection.
+///
+/// Key design decisions:
+/// - [ensureUserExists] is the primary write method — it's idempotent and
+///   uses a read-before-write to avoid overwriting [createdAt].
+/// - [saveUser] is an alias for [ensureUserExists] for backward compatibility.
+/// - [updateUser] only updates specific fields and never touches [createdAt].
 class UserRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -16,9 +23,11 @@ class UserRepository {
   CollectionReference<Map<String, dynamic>> get _usersRef =>
       _firestore.collection('users');
 
+  // ── Read ─────────────────────────────────────────────────────────────────
+
   /// Fetch the current authenticated user's profile from Firestore.
   ///
-  /// Returns `null` if the document does not exist.
+  /// Returns `null` if not signed in or document does not exist.
   Future<AppUser?> getCurrentUser() async {
     final user = _auth.currentUser;
     if (user == null) return null;
@@ -27,36 +36,78 @@ class UserRepository {
 
   /// Fetch a user profile by [uid].
   Future<AppUser?> getUser(String uid) async {
-    final doc = await _usersRef.doc(uid).get();
-    if (!doc.exists) return null;
-    return AppUser.fromFirestore(doc);
+    try {
+      final doc = await _usersRef.doc(uid).get();
+      if (!doc.exists) return null;
+      return AppUser.fromFirestore(doc);
+    } catch (e, st) {
+      AppLogger.e('[UserRepository] getUser failed', error: e, stackTrace: st);
+      return null;
+    }
   }
 
-  /// Save or merge a user profile.
-  Future<void> saveUser(AppUser user) async {
-    await _usersRef
-        .doc(user.uid)
-        .set(user.toFirestore(), SetOptions(merge: true));
+  // ── Write ─────────────────────────────────────────────────────────────────
+
+  /// Idempotent user creation.
+  ///
+  /// Checks if the document already exists:
+  /// - If **NOT** exists → writes full document including [createdAt].
+  /// - If **exists** → only updates mutable fields (never overwrites [createdAt]).
+  ///
+  /// This is safe to call multiple times (e.g., on every sign-in) without
+  /// causing duplicate documents or clobbering existing data.
+  Future<void> ensureUserExists(AppUser user) async {
+    try {
+      final docRef = _usersRef.doc(user.uid);
+      final snap = await docRef.get();
+
+      if (!snap.exists) {
+        // First time — create full document with createdAt
+        AppLogger.d('[UserRepository] Creating new user document: ${user.uid}');
+        await docRef.set(user.toFirestoreCreate());
+      } else {
+        // Already exists — only update mutable fields, preserve createdAt
+        AppLogger.d('[UserRepository] Updating existing user document: ${user.uid}');
+        await docRef.set(user.toFirestoreUpdate(), SetOptions(merge: true));
+      }
+    } catch (e, st) {
+      AppLogger.e('[UserRepository] ensureUserExists failed', error: e, stackTrace: st);
+      rethrow;
+    }
   }
+
+  /// Alias for [ensureUserExists] — kept for backward compatibility.
+  Future<void> saveUser(AppUser user) => ensureUserExists(user);
 
   /// Partial update — merges [data] into the existing document.
   ///
-  /// Also syncs [fullName] → Firebase Auth `displayName` when present.
+  /// Never touches [createdAt]. Syncs [fullName] → Firebase Auth displayName
+  /// when present.
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
+    // Never allow callers to overwrite createdAt via this method
+    data.remove('createdAt');
     data['updatedAt'] = FieldValue.serverTimestamp();
-    await _usersRef.doc(uid).set(data, SetOptions(merge: true));
 
-    // Keep Firebase Auth displayName in sync
-    if (data.containsKey('fullName')) {
-      final user = _auth.currentUser;
-      if (user != null && user.uid == uid) {
-        final newName = data['fullName'] as String?;
-        if (newName != null && newName.isNotEmpty) {
-          await user.updateDisplayName(newName);
+    try {
+      await _usersRef.doc(uid).set(data, SetOptions(merge: true));
+
+      // Keep Firebase Auth displayName in sync
+      if (data.containsKey('fullName')) {
+        final user = _auth.currentUser;
+        if (user != null && user.uid == uid) {
+          final newName = data['fullName'] as String?;
+          if (newName != null && newName.isNotEmpty) {
+            await user.updateDisplayName(newName);
+          }
         }
       }
+    } catch (e, st) {
+      AppLogger.e('[UserRepository] updateUser failed', error: e, stackTrace: st);
+      rethrow;
     }
   }
+
+  // ── Streams ──────────────────────────────────────────────────────────────
 
   /// Real-time stream of the current authenticated user's Firestore profile.
   ///
@@ -76,10 +127,11 @@ class UserRepository {
     });
   }
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
   /// Resolve the user's first name from Firebase Auth or Firestore.
   ///
-  /// Tries `displayName` first, then falls back to the Firestore `fullName`
-  /// field, and finally to the email prefix.
+  /// Priority: Auth displayName → Firestore fullName → email prefix.
   Future<String> resolveFirstName() async {
     final user = _auth.currentUser;
     if (user == null) return '';
@@ -110,7 +162,7 @@ class UserRepository {
   /// Should only be called after the seller profile document is created.
   Future<void> upgradeToSeller(String uid) async {
     await _usersRef.doc(uid).set(
-      {'role': 'seller'},
+      {'role': 'seller', 'updatedAt': FieldValue.serverTimestamp()},
       SetOptions(merge: true),
     );
   }
