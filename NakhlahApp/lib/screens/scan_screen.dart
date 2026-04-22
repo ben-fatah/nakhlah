@@ -28,6 +28,9 @@ class _ScanScreenState extends State<ScanScreen>
   bool _isAnalyzing = false;
   File? _pickedImage;
 
+  Offset? _focusPoint;
+  bool _showFocusIndicator = false;
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -65,7 +68,7 @@ class _ScanScreenState extends State<ScanScreen>
 
       final controller = CameraController(
         cameras.first,
-        ResolutionPreset.medium, // ⚡ medium instead of high — we compress anyway
+        ResolutionPreset.high, // High resolution for better object classification
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
@@ -176,7 +179,20 @@ class _ScanScreenState extends State<ScanScreen>
       await _analyzeImage(_pickedImage!);
     } else if (_isCameraInitialized && _cameraController != null) {
       try {
+        // Stabilize frame and lock focus/exposure before capture to minimize blur
+        try {
+          await _cameraController!.setFocusMode(FocusMode.locked);
+          await _cameraController!.setExposureMode(ExposureMode.locked);
+        } catch (_) {} // Ignore if device doesn't support locking
+
         final XFile photo = await _cameraController!.takePicture();
+
+        // Restore auto modes after capture
+        try {
+          await _cameraController!.setFocusMode(FocusMode.auto);
+          await _cameraController!.setExposureMode(ExposureMode.auto);
+        } catch (_) {}
+
         await _analyzeImage(File(photo.path));
       } catch (e) {
         if (mounted) {
@@ -546,7 +562,62 @@ class _ScanScreenState extends State<ScanScreen>
       );
     }
     if (_isCameraInitialized && _cameraController != null) {
-      return CameraPreview(_cameraController!);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            onTapDown: (details) async {
+              if (!_isCameraInitialized || _cameraController == null) return;
+              try {
+                // Calculate relative coordinates for camera plugin (0.0 to 1.0)
+                final double x = details.localPosition.dx / constraints.maxWidth;
+                final double y = details.localPosition.dy / constraints.maxHeight;
+                final dx = x.clamp(0.0, 1.0);
+                final dy = y.clamp(0.0, 1.0);
+                final point = Offset(dx, dy);
+
+                // Set focus and exposure points
+                await _cameraController!.setFocusPoint(point);
+                await _cameraController!.setFocusMode(FocusMode.auto);
+                await _cameraController!.setExposurePoint(point);
+                await _cameraController!.setExposureMode(ExposureMode.auto);
+
+                // Show focus indicator
+                setState(() {
+                  _focusPoint = details.localPosition;
+                  _showFocusIndicator = true;
+                });
+
+                // Hide indicator after 2 seconds
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted && _focusPoint == details.localPosition) {
+                    setState(() {
+                      _showFocusIndicator = false;
+                    });
+                  }
+                });
+              } catch (e) {
+                debugPrint('Error setting focus: $e');
+              }
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CameraPreview(_cameraController!),
+                if (_showFocusIndicator && _focusPoint != null)
+                  Positioned(
+                    left: _focusPoint!.dx - 24,
+                    top: _focusPoint!.dy - 24,
+                    child: const Icon(
+                      Icons.filter_center_focus,
+                      color: Color(0xFFD4A017),
+                      size: 48,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      );
     }
     return Container(
       color: Colors.black,
