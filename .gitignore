@@ -121,3 +121,7 @@ build/
 # ==============================
 .vscode/
 .idea/
+# Allow ONNX models
+!assets/models/
+!assets/models/*.onnx
+!assets/models/*.json
