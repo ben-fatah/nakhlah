@@ -1,5 +1,6 @@
 import '../l10n/app_localizations.dart';
 import '../models/date_model.dart';
+import '../services/date_metadata.dart';
 
 /// Repository providing [DateVariety] data.
 ///
@@ -7,7 +8,20 @@ import '../models/date_model.dart';
 /// switchover.
 class DateRepository {
   /// Returns all date varieties.
-  List<DateVariety> getAll() => _staticVarieties;
+  List<DateVariety> getAll() {
+    return _staticVarieties.map((v) {
+      final meta = DateMetadataLoader.instance.lookup(v.tag);
+      if (meta != null) {
+        return v.copyWith(
+          kcal: meta.calories,
+          carbs: meta.carbs,
+          fiber: meta.fiber,
+          potassium: meta.potassium,
+        );
+      }
+      return v;
+    }).toList();
+  }
 
   /// Returns varieties filtered by [tag] and optional [searchQuery].
   List<DateVariety> getFiltered(
@@ -15,7 +29,7 @@ class DateRepository {
     required String tag,
     String searchQuery = '',
   }) {
-    return _staticVarieties.where((v) {
+    return getAll().where((v) {
       final matchFilter = tag == 'all' || v.tag == tag;
       final matchSearch = searchQuery.isEmpty ||
           v.nameGetter(l).toLowerCase().contains(searchQuery.toLowerCase()) ||

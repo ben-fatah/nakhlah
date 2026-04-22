@@ -53,7 +53,7 @@ class DateMetadataLoader {
     final decoded = jsonDecode(raw) as Map<String, dynamic>;
     _cache = decoded.map(
       (key, value) =>
-          MapEntry(key, DateMeta.fromJson(value as Map<String, dynamic>)),
+          MapEntry(key.toLowerCase(), DateMeta.fromJson(value as Map<String, dynamic>)),
     );
     return _cache!;
   }
