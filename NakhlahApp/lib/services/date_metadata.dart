@@ -59,5 +59,5 @@ class DateMetadataLoader {
   }
 
   /// Synchronous lookup after [load()] has been called at startup.
-  DateMeta? lookup(String label) => _cache?[label];
+  DateMeta? lookup(String label) => _cache?[label.trim().toLowerCase()];
 }
