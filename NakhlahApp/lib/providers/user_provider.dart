@@ -24,13 +24,13 @@ class UserProvider extends ValueNotifier<UserState> {
   }
 
   void setCurrentUser(AppUser? user) {
-    this.value = this.value.copyWith(currentUser: user);
+    value = value.copyWith(currentUser: user);
   }
 
   Future<void> fetchAndSetUser(String uid) async {
     final repo = UserRepository();
     final user = await repo.getUser(uid);
-    this.value = this.value.copyWith(currentUser: user);
+    value = value.copyWith(currentUser: user);
   }
 }
 

@@ -14,42 +14,47 @@ import '../home_page.dart';
 import '../../repositories/user_repository.dart';
 import '../../providers/user_provider.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IMPORTANT: Replace these with your REAL Authentica credentials.
+// =============================================================================
+// AUTHENTICA API — CONFIRMED CONFIGURATION
 //
-// How to get them:
-//   1. Go to https://authentica.sa → Dashboard → API Keys
-//   2. Copy your Bearer token (it looks like a long hash, NOT starting with $2y$)
-//   3. Paste it below as _kApiKey
+// Authentica support confirmed:
+//   • The $2y$10$... string IS your real API key (bcrypt-style tokens).
+//   • Header: X-Authorization: <raw_key>   (no "Bearer" prefix)
+//   • Base:   https://api.authentica.sa/api/v2/
 //
-// The $2y$10$... string in the old code was a bcrypt HASH of a password,
-// NOT an API key — that is why you were getting 404 / auth errors.
-// ─────────────────────────────────────────────────────────────────────────────
-const String _kAuthenticaApiKey =
-    'YOUR_AUTHENTICA_API_KEY_HERE'; // ← Replace this!
+// Send OTP   → POST /api/v2/send-otp
+//   body: { "method": "sms", "phone": "+966XXXXXXXXX", "template_id": 1 }
+//
+// Verify OTP → POST /api/v2/verify-otp
+//   body: { "phone": "+966XXXXXXXXX", "otp": "<user-entered-code>" }
+//
+// Template IDs (Authentica default sender):
+//   1 = Arabic OTP message
+//   2 = English OTP message
+//   Templates 1 & 2 send a 4-digit OTP.
+// =============================================================================
 
-const String _kSendEndpoint = 'https://api.authentica.sa/api/otp/send';
-const String _kVerifyEndpoint = 'https://api.authentica.sa/api/otp/verify';
+/// Your Authentica API key — confirmed by support that $2y$10$... IS the key.
+/// Raw string literal (r'...') prevents Dart from interpreting the $ signs.
+const String _kApiKey =
+    r'$2y$10$kRb06pu7yKhrIp2xgFDKDuZSa.2bOoalH8XbGcuMde2YVRJVhJ1si';
 
-/// OTP Verification Screen — uses Authentica.sa SMS API only.
+const String _kSendUrl   = 'https://api.authentica.sa/api/v2/send-otp';
+const String _kVerifyUrl = 'https://api.authentica.sa/api/v2/verify-otp';
+
+/// Template 1 = Arabic SMS (4-digit OTP, Authentica default sender)
+const int _kTemplateId = 1;
+
+/// Authentica templates 1 & 2 send 4-digit OTPs
+const int _kOtpLength = 4;
+
+// =============================================================================
+
+/// OTP Verification Screen — Authentica SMS API v2
 ///
-/// Firebase Phone Auth has been removed entirely.
-/// Firebase is only used AFTER verification to look up the user in Firestore.
-///
-/// Usage:
-/// ```dart
-/// Navigator.of(context).push(MaterialPageRoute(
-///   builder: (_) => OtpVerificationScreen(phoneNumber: '+966501234567'),
-/// ));
-/// ```
-///
-/// [phoneNumber] should be in E.164 format (+966XXXXXXXXX) or local
-/// Saudi format (05XXXXXXXX) — both are normalised internally.
-///
-/// [onVerified] is an optional callback used by sign-up flow. When provided
-/// it is called BEFORE the Firestore lookup so the sign-up screen can write
-/// the new user document first. After it completes, the screen does the
-/// normal Firestore lookup and navigates to HomePage.
+/// [phoneNumber] : Saudi format (05XXXXXXXX) or E.164 (+966XXXXXXXXX)
+/// [onVerified]  : optional async callback fired right after OTP succeeds
+///                 (used by sign-up to write the Firestore user doc first)
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
   final Future<void> Function()? onVerified;
@@ -66,241 +71,237 @@ class OtpVerificationScreen extends StatefulWidget {
 
 class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     with SingleTickerProviderStateMixin {
-  // ── OTP boxes (4-digit Authentica code) ───────────────────────────────────
-  static const int _otpLength = 4;
+  // ── OTP digit controllers & focus nodes ────────────────────────────────────
   final List<TextEditingController> _controllers =
-      List.generate(_otpLength, (_) => TextEditingController());
+      List.generate(_kOtpLength, (_) => TextEditingController());
   final List<FocusNode> _focusNodes =
-      List.generate(_otpLength, (_) => FocusNode());
+      List.generate(_kOtpLength, (_) => FocusNode());
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  bool _isSending = true;
-  bool _isVerifying = false;
-  String? _errorMsg;
+  // ── Screen state ───────────────────────────────────────────────────────────
+  bool    _isSending   = true;   // true while waiting for send-otp response
+  bool    _isVerifying = false;  // true while waiting for verify-otp response
+  String? _errorMsg;             // shown in red banner when non-null
 
-  // ── Resend countdown ──────────────────────────────────────────────────────
-  static const int _resendCooldown = 60;
-  int _secondsLeft = _resendCooldown;
-  Timer? _resendTimer;
+  // ── Resend countdown ───────────────────────────────────────────────────────
+  static const int _cooldownSec = 60;
+  int    _secondsLeft = _cooldownSec;
+  Timer? _countdownTimer;
 
-  // ── Fade animation ────────────────────────────────────────────────────────
+  // ── Fade-in animation for OTP boxes ───────────────────────────────────────
   late final AnimationController _fadeCtrl;
-  late final Animation<double> _fadeIn;
+  late final Animation<double>   _fadeAnim;
 
-  // ── Dio ───────────────────────────────────────────────────────────────────
+  // ── Dio client (headers set once in initState) ────────────────────────────
   late final Dio _dio;
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  String get _enteredOtp => _controllers.map((c) => c.text).join();
-  bool get _otpComplete => _enteredOtp.length == _otpLength;
+  // ── Computed helpers ───────────────────────────────────────────────────────
+  String get _enteredOtp  => _controllers.map((c) => c.text).join();
+  bool   get _otpComplete => _enteredOtp.length == _kOtpLength;
 
-  // ── Phone normalisation ───────────────────────────────────────────────────
-  /// Always returns E.164 format: +966XXXXXXXXX
-  String _normalisePhone(String raw) {
-    String p = raw.trim().replaceAll(' ', '').replaceAll('-', '');
-    if (p.startsWith('+966')) return p;
+  /// Convert any Saudi phone format → E.164: +966XXXXXXXXX
+  String _e164(String raw) {
+    final p = raw.trim().replaceAll(RegExp(r'[\s\-()]'), '');
+    if (p.startsWith('+966'))  return p;
     if (p.startsWith('00966')) return '+966${p.substring(5)}';
-    if (p.startsWith('966')) return '+966${p.substring(3)}';
-    if (p.startsWith('0')) return '+966${p.substring(1)}';
+    if (p.startsWith('966'))   return '+966${p.substring(3)}';
+    if (p.startsWith('0'))     return '+966${p.substring(1)}';
     return '+966$p';
   }
 
-  // =========================================================================
+  // ==========================================================================
   @override
   void initState() {
     super.initState();
 
-    _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_kAuthenticaApiKey',
-      },
-    ));
+    // Build Dio with Authentica-required headers set globally
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 20),
+        receiveTimeout: const Duration(seconds: 20),
+        headers: {
+          'X-Authorization': _kApiKey,        // confirmed correct header name
+          'Accept'         : 'application/json',
+          'Content-Type'   : 'application/json',
+        },
+      ),
+    );
 
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _fadeIn = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
 
+    // Send the OTP immediately when the screen opens
     _sendOtp();
   }
 
   @override
   void dispose() {
     for (final c in _controllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
-    _resendTimer?.cancel();
+    for (final f in _focusNodes)  f.dispose();
+    _countdownTimer?.cancel();
     _fadeCtrl.dispose();
-    _dio.close();
+    _dio.close(force: false);
     super.dispose();
   }
 
-  // ── Send OTP ───────────────────────────────────────────────────────────────
+  // ==========================================================================
+  // SEND OTP  →  POST /api/v2/send-otp
+  // ==========================================================================
   Future<void> _sendOtp({bool isResend = false}) async {
     if (!mounted) return;
 
     setState(() {
       _isSending = true;
-      _errorMsg = null;
+      _errorMsg  = null;
     });
 
     if (isResend) {
       for (final c in _controllers) c.clear();
-      if (mounted) _focusNodes.first.requestFocus();
-    }
-
-    final phone = _normalisePhone(widget.phoneNumber);
-    AppLogger.d('[OTP] Sending to $phone via Authentica...');
-
-    // ── Guard: API key not set yet ────────────────────────────────────────
-    if (_kAuthenticaApiKey == ''$2y$10$msQf48nCdkmu7pU9n0W9VOgw0pSrwSe7vD09ioaxTepB7i1A5AGte') {
-      if (!mounted) return;
-      setState(() {
-        _isSending = false;
-        _errorMsg =
-            'API key not configured.\n'
-            'Open otp_verification_screen.dart and replace\n'
-            '_kAuthenticaApiKey with your real Authentica token.';
+      // Move focus to first box after the frame is drawn
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNodes.first.requestFocus();
       });
-      AppLogger.e('[OTP] API key is still the placeholder — update _kAuthenticaApiKey');
-      return;
     }
+
+    final phone = _e164(widget.phoneNumber);
+    AppLogger.d('[Authentica] Sending OTP to $phone (template_id=$_kTemplateId)');
 
     try {
       final response = await _dio.post(
-        _kSendEndpoint,
-        data: jsonEncode({'phone': phone}),
+        _kSendUrl,
+        data: jsonEncode({
+          'method'     : 'sms',
+          'phone'      : phone,
+          'template_id': _kTemplateId,
+        }),
       );
 
-      AppLogger.d('[OTP] Send response: ${response.statusCode} ${response.data}');
+      AppLogger.d('[Authentica] send-otp → ${response.statusCode} ${response.data}');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if ((response.statusCode ?? 0) ~/ 100 == 2) {
+        // Any 2xx = success
         if (!mounted) return;
         setState(() => _isSending = false);
         _fadeCtrl.forward();
-        _startResendTimer();
+        _startCountdown();
       } else {
-        _handleSendError(
+        _showSendError(
           'Unexpected status ${response.statusCode}',
           response.data,
         );
       }
     } on DioException catch (e) {
-      AppLogger.e('[OTP] DioException sending OTP: ${e.type} | ${e.response?.statusCode} | ${e.response?.data}');
-      _handleSendError(_dioPrettyError(e), e.response?.data);
-    } catch (e) {
-      AppLogger.e('[OTP] Unknown error sending OTP: $e');
-      _handleSendError('Unexpected error: $e', null);
+      AppLogger.e('[Authentica] send-otp DioException: '
+          '${e.type} status=${e.response?.statusCode} '
+          'body=${e.response?.data}');
+      _showSendError(_humanError(e), e.response?.data);
+    } catch (e, st) {
+      AppLogger.e('[Authentica] send-otp unknown error', error: e, stackTrace: st);
+      _showSendError('Unexpected error: $e', null);
     }
   }
 
-  void _handleSendError(String msg, dynamic responseData) {
+  void _showSendError(String base, dynamic body) {
     if (!mounted) return;
-    String display = msg;
-
-    // Try to extract a human-readable message from the JSON response body
-    if (responseData is Map) {
-      final serverMsg =
-          responseData['message'] ??
-          responseData['error'] ??
-          responseData['msg'];
-      if (serverMsg != null) {
-        display = '$msg\n(Server: $serverMsg)';
-      }
-    }
-
+    final extra = _serverMsg(body);
     setState(() {
       _isSending = false;
-      _errorMsg = display;
+      _errorMsg  = extra.isNotEmpty ? '$base\nServer said: $extra' : base;
     });
   }
 
-  // ── Verify OTP ─────────────────────────────────────────────────────────────
+  // ==========================================================================
+  // VERIFY OTP  →  POST /api/v2/verify-otp
+  // ==========================================================================
   Future<void> _verifyOtp() async {
-    if (!_otpComplete || _isVerifying) return;
+    if (!_otpComplete || _isVerifying || !mounted) return;
 
     setState(() {
       _isVerifying = true;
-      _errorMsg = null;
+      _errorMsg    = null;
     });
 
-    final phone = _normalisePhone(widget.phoneNumber);
-    final code = _enteredOtp;
-
-    AppLogger.d('[OTP] Verifying code $code for $phone...');
+    final phone = _e164(widget.phoneNumber);
+    final otp   = _enteredOtp;
+    AppLogger.d('[Authentica] Verifying OTP "$otp" for $phone');
 
     try {
       final response = await _dio.post(
-        _kVerifyEndpoint,
-        data: jsonEncode({'phone': phone, 'code': code}),
+        _kVerifyUrl,
+        data: jsonEncode({
+          'phone': phone,
+          'otp'  : otp,
+        }),
       );
 
-      AppLogger.d('[OTP] Verify response: ${response.statusCode} ${response.data}');
+      AppLogger.d('[Authentica] verify-otp → ${response.statusCode} ${response.data}');
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await _onVerificationSuccess();
+      if ((response.statusCode ?? 0) ~/ 100 == 2) {
+        // Any 2xx = OTP correct
+        await _postVerifyFlow();
       } else {
         if (!mounted) return;
         setState(() {
           _isVerifying = false;
-          _errorMsg = 'Incorrect code. Please try again.';
+          _errorMsg    = 'Incorrect code. Please try again.';
         });
       }
     } on DioException catch (e) {
-      AppLogger.e('[OTP] DioException verifying OTP: ${e.type} | ${e.response?.statusCode} | ${e.response?.data}');
-      final statusCode = e.response?.statusCode;
+      AppLogger.e('[Authentica] verify-otp DioException: '
+          '${e.type} status=${e.response?.statusCode} '
+          'body=${e.response?.data}');
+      final code = e.response?.statusCode ?? 0;
       if (!mounted) return;
       setState(() {
         _isVerifying = false;
-        _errorMsg = statusCode == 400 || statusCode == 401 || statusCode == 422
+        // 4xx for wrong code, network errors get a friendly message
+        _errorMsg = (code >= 400 && code < 500)
             ? 'Incorrect code. Please try again.'
-            : _dioPrettyError(e);
+            : _humanError(e);
       });
-    } catch (e) {
-      AppLogger.e('[OTP] Unknown error verifying OTP: $e');
+    } catch (e, st) {
+      AppLogger.e('[Authentica] verify-otp unknown error', error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isVerifying = false;
-        _errorMsg = 'Unexpected error: $e';
+        _errorMsg    = 'Unexpected error: $e';
       });
     }
   }
 
-  // ── After successful verification ──────────────────────────────────────────
-  Future<void> _onVerificationSuccess() async {
-    AppLogger.d('[OTP] Verification successful!');
+  // ==========================================================================
+  // POST-VERIFICATION FLOW
+  // ==========================================================================
+  Future<void> _postVerifyFlow() async {
+    AppLogger.d('[OTP] Verified ✓ — running post-verify flow');
 
     try {
-      // Step 1: Run sign-up callback if provided (writes Firestore user doc)
+      // 1. Sign-up callback: write Firestore user doc before we look it up
       if (widget.onVerified != null) {
-        AppLogger.d('[OTP] Running onVerified callback...');
+        AppLogger.d('[OTP] Calling onVerified callback...');
         await widget.onVerified!();
       }
 
-      // Step 2: Ensure a Firebase anonymous session exists so we can read
-      // Firestore (Security Rules require auth). Uses existing session if any.
+      // 2. Ensure a Firebase session exists (needed for Firestore rules)
       if (FirebaseAuth.instance.currentUser == null) {
-        AppLogger.d('[OTP] No Firebase session — signing in anonymously...');
         await FirebaseAuth.instance.signInAnonymously();
+        AppLogger.d('[OTP] Anonymous Firebase session created');
       }
 
-      // Step 3: Look up the user document in Firestore by phone
-      final phone = _normalisePhone(widget.phoneNumber);
-      final userRepo = UserRepository();
-      final appUser = await userRepo.getUserByPhone(phone);
+      // 3. Look up user Firestore document by phone
+      final phone   = _e164(widget.phoneNumber);
+      final appUser = await UserRepository().getUserByPhone(phone);
 
       if (appUser != null) {
-        AppLogger.d('[OTP] Found user: ${appUser.uid}');
+        AppLogger.d('[OTP] Firestore user found: ${appUser.uid}');
 
         // Update in-memory state
         userProvider.setCurrentUser(appUser);
         userProvider.setOtpVerified(true);
 
-        // Persist session so the app can restore it on cold start
+        // Persist session so cold restarts don't require re-login
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isOtpVerified', true);
         await prefs.setString('verifiedPhone', phone);
@@ -311,77 +312,87 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           (_) => false,
         );
       } else {
-        // User completed OTP but has no Firestore document yet.
-        // This can happen if the sign-up Firestore write failed.
-        AppLogger.w('[OTP] No user found in Firestore for $phone');
+        AppLogger.w('[OTP] No Firestore user for $phone');
         if (!mounted) return;
         setState(() {
           _isVerifying = false;
-          _errorMsg =
+          _errorMsg    =
               'Account not found. Please sign up first or try again.';
         });
       }
     } catch (e, st) {
-      AppLogger.e('[OTP] Error in _onVerificationSuccess', error: e, stackTrace: st);
+      AppLogger.e('[OTP] Post-verify error', error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isVerifying = false;
-        _errorMsg = 'Sign-in error: $e';
+        _errorMsg    = 'Sign-in error: $e';
       });
     }
   }
 
-  // ── Resend timer ───────────────────────────────────────────────────────────
-  void _startResendTimer() {
-    _resendTimer?.cancel();
-    setState(() => _secondsLeft = _resendCooldown);
-    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) {
-        t.cancel();
-        return;
-      }
+  // ==========================================================================
+  // UTILITY HELPERS
+  // ==========================================================================
+
+  void _startCountdown() {
+    _countdownTimer?.cancel();
+    setState(() => _secondsLeft = _cooldownSec);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
       setState(() {
-        if (_secondsLeft > 0) {
-          _secondsLeft--;
-        } else {
-          t.cancel();
-        }
+        _secondsLeft > 0 ? _secondsLeft-- : t.cancel();
       });
     });
   }
 
-  // ── Dio error → human string ───────────────────────────────────────────────
-  String _dioPrettyError(DioException e) {
+  /// Extract the most useful text from an Authentica error response body.
+  String _serverMsg(dynamic body) {
+    if (body == null) return '';
+    if (body is String) {
+      try {
+        return _serverMsg(jsonDecode(body));
+      } catch (_) {
+        return body.isNotEmpty ? body : '';
+      }
+    }
+    if (body is Map) {
+      final v = body['message'] ?? body['error'] ??
+                body['msg']     ?? body['errors'];
+      if (v is List) return v.join(', ');
+      return v?.toString() ?? '';
+    }
+    return '';
+  }
+
+  /// Map Dio network errors → friendly user-facing strings.
+  String _humanError(DioException e) {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Request timed out. Check your internet connection.';
+        return 'Request timed out. Please check your internet and try again.';
       case DioExceptionType.connectionError:
         return 'No internet connection. Please check your network.';
       case DioExceptionType.badResponse:
-        final code = e.response?.statusCode;
+        final code = e.response?.statusCode ?? 0;
+        final hint = _serverMsg(e.response?.data);
         if (code == 401 || code == 403) {
-          return 'API authentication failed (${code}). Check the API key in the app.';
-        }
-        if (code == 404) {
-          return 'API endpoint not found (404). Check the Authentica API URL.';
-        }
-        if (code == 422) {
-          return 'Invalid phone number format sent to server.';
+          return 'API authentication failed ($code).'
+              '${hint.isNotEmpty ? "\nServer: $hint" : ""}';
         }
         if (code == 429) {
-          return 'Too many requests. Please wait a few minutes.';
+          return 'Too many OTP requests. Please wait a few minutes.';
         }
-        return 'Server error ($code). Please try again.';
+        return 'Server error ($code). Please try again.'
+            '${hint.isNotEmpty ? "\nServer: $hint" : ""}';
       default:
         return 'Network error. Please check your connection.';
     }
   }
 
-  // =========================================================================
+  // ==========================================================================
   // UI
-  // =========================================================================
+  // ==========================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -402,7 +413,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
             children: [
               const SizedBox(height: 16),
 
-              // ── Icon ──────────────────────────────────────────────────────
+              // ── Phone icon ───────────────────────────────────────────────
               Container(
                 width: 96,
                 height: 96,
@@ -418,7 +429,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ),
               const SizedBox(height: 24),
 
-              // ── Title ─────────────────────────────────────────────────────
+              // ── Title ────────────────────────────────────────────────────
               Text(
                 'Enter Verification Code',
                 textAlign: TextAlign.center,
@@ -430,7 +441,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ),
               const SizedBox(height: 10),
 
-              // ── Subtitle ──────────────────────────────────────────────────
+              // ── Subtitle ─────────────────────────────────────────────────
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
@@ -442,7 +453,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   children: [
                     const TextSpan(text: 'A 4-digit code was sent to\n'),
                     TextSpan(
-                      text: _normalisePhone(widget.phoneNumber),
+                      text: _e164(widget.phoneNumber),
                       style: GoogleFonts.cairo(
                         fontWeight: FontWeight.w700,
                         color: AppColors.titleColor,
@@ -453,7 +464,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ),
               const SizedBox(height: 40),
 
-              // ── Sending indicator or OTP boxes ────────────────────────────
+              // ── Spinner OR OTP boxes ─────────────────────────────────────
               if (_isSending)
                 Column(
                   children: [
@@ -472,88 +483,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   ],
                 )
               else
-                FadeTransition(
-                  opacity: _fadeIn,
-                  child: _buildOtpBoxes(),
-                ),
+                FadeTransition(opacity: _fadeAnim, child: _otpRow()),
 
               const SizedBox(height: 32),
 
-              // ── Error message ─────────────────────────────────────────────
+              // ── Error banner ─────────────────────────────────────────────
               if (_errorMsg != null) ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        color: Colors.red.shade700,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMsg!,
-                          style: GoogleFonts.cairo(
-                            color: Colors.red.shade700,
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                _errorBanner(),
+                const SizedBox(height: 16),
               ],
 
-              // ── Verify button & resend ─────────────────────────────────────
+              // ── Verify button + resend ───────────────────────────────────
               if (!_isSending) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: (_otpComplete && !_isVerifying) ? _verifyOtp : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.buttonBg,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          AppColors.buttonBg.withValues(alpha: 0.4),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isVerifying
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Verify',
-                            style: GoogleFonts.cairo(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                  ),
-                ),
+                _verifyButton(),
                 const SizedBox(height: 24),
-                _buildResendRow(),
+                _resendRow(),
               ],
 
               const SizedBox(height: 40),
@@ -564,31 +508,46 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     );
   }
 
-  // ── OTP digit boxes ────────────────────────────────────────────────────────
-  Widget _buildOtpBoxes() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_otpLength, (i) {
-        return Container(
-          width: 56,
-          height: 64,
-          margin: const EdgeInsets.symmetric(horizontal: 6),
+  // ── 4 OTP digit boxes ──────────────────────────────────────────────────────
+  Widget _otpRow() => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_kOtpLength, _otpBox),
+      );
+
+  Widget _otpBox(int i) => Container(
+        width: 62,
+        height: 72,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        child: Focus(
+          onKeyEvent: (_, event) {
+            // Backspace on empty box → go to previous box
+            if (event is KeyDownEvent &&
+                event.logicalKey == LogicalKeyboardKey.backspace &&
+                _controllers[i].text.isEmpty &&
+                i > 0) {
+              _controllers[i - 1].clear();
+              _focusNodes[i - 1].requestFocus();
+              setState(() {});
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
           child: TextFormField(
-            controller: _controllers[i],
-            focusNode: _focusNodes[i],
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.number,
-            maxLength: 1,
+            controller:     _controllers[i],
+            focusNode:      _focusNodes[i],
+            textAlign:      TextAlign.center,
+            keyboardType:   TextInputType.number,
+            maxLength:      1,
             style: GoogleFonts.cairo(
-              fontSize: 24,
+              fontSize:   26,
               fontWeight: FontWeight.w800,
-              color: AppColors.titleColor,
+              color:      AppColors.titleColor,
             ),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              counterText: '',
-              filled: true,
-              fillColor: AppColors.fieldBg,
+              counterText:    '',
+              filled:         true,
+              fillColor:      AppColors.fieldBg,
               contentPadding: EdgeInsets.zero,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -600,33 +559,86 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: AppColors.brown700,
-                  width: 2,
-                ),
+                borderSide: const BorderSide(color: AppColors.brown700, width: 2.5),
               ),
             ),
             onChanged: (val) {
-              if (val.length == 1 && i < _otpLength - 1) {
+              if (val.length == 1 && i < _kOtpLength - 1) {
                 _focusNodes[i + 1].requestFocus();
-              } else if (val.isEmpty && i > 0) {
-                _focusNodes[i - 1].requestFocus();
               }
-              setState(() {}); // refresh button state
-              // Auto-verify when all 4 digits entered
+              setState(() {}); // refresh button enabled/disabled state
+
+              // Auto-verify once all boxes are filled
               if (_otpComplete && !_isVerifying) {
-                // Small delay so the last digit renders first
-                Future.delayed(const Duration(milliseconds: 100), _verifyOtp);
+                Future.delayed(const Duration(milliseconds: 150), _verifyOtp);
               }
             },
           ),
-        );
-      }),
-    );
-  }
+        ),
+      );
+
+  // ── Error banner ───────────────────────────────────────────────────────────
+  Widget _errorBanner() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color:        Colors.red.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border:       Border.all(color: Colors.red.shade200),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline_rounded,
+                color: Colors.red.shade700, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _errorMsg!,
+                style: GoogleFonts.cairo(
+                  color:  Colors.red.shade700,
+                  fontSize: 13,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  // ── Verify button ──────────────────────────────────────────────────────────
+  Widget _verifyButton() => SizedBox(
+        width:  double.infinity,
+        height: 54,
+        child: ElevatedButton(
+          onPressed: (_otpComplete && !_isVerifying) ? _verifyOtp : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.buttonBg,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.buttonBg.withValues(alpha: 0.4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            elevation: 0,
+          ),
+          child: _isVerifying
+              ? const SizedBox(
+                  width: 24, height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5,
+                  ),
+                )
+              : Text(
+                  'Verify',
+                  style: GoogleFonts.cairo(
+                    fontSize: 16, fontWeight: FontWeight.w700,
+                  ),
+                ),
+        ),
+      );
 
   // ── Resend row ─────────────────────────────────────────────────────────────
-  Widget _buildResendRow() {
+  Widget _resendRow() {
     final canResend = _secondsLeft == 0 && !_isSending && !_isVerifying;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -640,11 +652,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           child: Text(
             canResend ? 'Resend' : 'Resend in ${_secondsLeft}s',
             style: GoogleFonts.cairo(
-              fontSize: 14,
+              fontSize:   14,
               fontWeight: FontWeight.w700,
-              color: canResend ? AppColors.linkBrown : AppColors.hintColor,
-              decoration:
-                  canResend ? TextDecoration.underline : TextDecoration.none,
+              color:      canResend ? AppColors.linkBrown : AppColors.hintColor,
+              decoration: canResend
+                  ? TextDecoration.underline
+                  : TextDecoration.none,
               decorationColor: AppColors.linkBrown,
             ),
           ),

@@ -297,7 +297,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
         return Image.memory(
           bytes,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => fallback,
+          errorBuilder: (_, _, _) => fallback,
         );
       } catch (_) {
         return fallback;
@@ -308,7 +308,7 @@ class _ManageProfileScreenState extends State<ManageProfileScreen> {
     return Image.network(
       url,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => fallback,
+      errorBuilder: (_, _, _) => fallback,
     );
   }
 

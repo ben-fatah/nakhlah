@@ -12,7 +12,6 @@ import '../repositories/user_repository.dart';
 import '../providers/locale_provider.dart';
 import '../widgets/lang_toggle_button.dart';
 import 'sign_in_screen.dart';
-import 'home_page.dart';
 import 'auth/otp_verification_screen.dart';
 
 class SignUpScreen extends StatefulWidget {

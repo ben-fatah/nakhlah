@@ -10,7 +10,6 @@ import '../providers/locale_provider.dart';
 import '../widgets/lang_toggle_button.dart';
 import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
-import 'home_page.dart';
 import 'auth/otp_verification_screen.dart';
 import '../repositories/user_repository.dart';
 
